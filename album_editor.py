@@ -6,12 +6,12 @@ import cv2
 from PIL import Image, ImageTk
 
 from screen import Rect, enable_dpi
-from screenshot_album import Album, CARD_LABELS, read_image
+from screenshot_album import Album, read_image
 from setup_support import selection_bounds, preview_scale
 from profile_support import load_profile
 
-SYMBOLS = {'s': '♠', 'h': '♥', 'd': '♦', 'c': '♣'}
-CARD_CHOICES = {f'{card[0]}{SYMBOLS[card[1]]}  ({card})': card for card in CARD_LABELS}
+from card_choices import CARD_CHOICES, choice_color, display_choice, resolve_choice
+from color_choice import ColorChoice
 
 
 class AlbumEditor:
@@ -70,7 +70,7 @@ class AlbumEditor:
         self.kind_picker = ttk.Combobox(controls, textvariable=self.kind, values=['card', 'empty', 'back', 'glyph'], state='readonly', width=9)
         self.kind_picker.pack(side='left')
         self.kind_picker.bind('<<ComboboxSelected>>', lambda e: self.set_choices())
-        self.label_picker = ttk.Combobox(controls, textvariable=self.label, state='readonly', width=20)
+        self.label_picker = ColorChoice(controls, textvariable=self.label, color=choice_color, width=20)
         self.label_picker.pack(side='left', padx=6)
         ttk.Button(controls, text='Сохранить → дальше (Enter)', command=self.save_next).pack(side='left')
         ttk.Button(controls, text='Нечитаемо / пропустить', command=self.skip).pack(side='left', padx=5)
@@ -165,20 +165,21 @@ class AlbumEditor:
         self.item_name.set(name)
         self.pending_rect = None
         item = self.record['items'][name]
-        self.kind.set(item['kind'])
+        # Reopen an empty card slot in the card list, with 'Пусто' selected.
+        self.kind.set('card' if item['kind'] == 'empty' and name.startswith(('hero', 'board')) else item['kind'])
         self.set_choices(item.get('label'))
         self.render()
         x, y, w, h = Rect(*item['rect']).pixels(self.photo.width(), self.photo.height())
         self.box = self.canvas.create_rectangle(x, y, x+w, y+h, outline='#ffffff', width=2, tags='selection')
         self.show_crop(item['rect'])
-        self.status.set(f'{name}: {item["status"]}. '+('Зоны предложены автоматически — проверьте рамки! ' if self.record.get('suggested_rois') else '')+'Выберите метку и нажмите Enter. Пустой слот: тип empty; анимация/перекрытие: пропустить.')
+        self.status.set(f'{name}: {item["status"]}. '+('Зоны предложены автоматически — проверьте рамки! ' if self.record.get('suggested_rois') else '')+'Выберите метку и нажмите Enter. Пустой слот: пункт «Пусто» в списке карт; анимация/перекрытие: пропустить.')
 
     def set_choices(self, stored=None):
         kind = self.kind.get()
         values = list(CARD_CHOICES) if kind == 'card' else (['empty'] if kind == 'empty' else (['back'] if kind == 'back' else list('0123456789.,KMB')))
         self.label_picker.config(values=values)
         if kind == 'card':
-            display = next((text for text, code in CARD_CHOICES.items() if code == stored), '')
+            display = display_choice(stored)
         else:
             display = stored if stored in values else (values[0] if kind in ('empty', 'back') else '')
         self.label.set(display)
@@ -227,9 +228,9 @@ class AlbumEditor:
     def apply(self, skip=False):
         if not self.record or not self.item_id:
             return
-        label = CARD_CHOICES.get(self.label.get(), self.label.get())
+        kind, label = resolve_choice(self.kind.get(), self.label.get())
         try:
-            self.record = self.album.annotate(self.record['id'], self.item_id, self.kind.get(), label,
+            self.record = self.album.annotate(self.record['id'], self.item_id, kind, label,
                                               rect=self.pending_rect, skip=skip, revision=self.record['revision'])
             self.pending_rect = None
             self.advance()
