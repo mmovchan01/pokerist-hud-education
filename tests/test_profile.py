@@ -69,3 +69,22 @@ def test_legacy_decimal_samples_are_loaded(tmp_path):
     source = next((BUILTIN/'templates/glyph/dot').glob('*.png'))
     (folder/'legacy.png').write_bytes(source.read_bytes())
     assert [label for label, _ in TemplateBank(tmp_path).candidates('glyph')] == ['.']
+
+
+@pytest.mark.parametrize('number', range(1, 7))
+def test_complete_uploaded_screenshot(recognizer, number):
+    # These are still training/reference images, not an accuracy holdout.
+    path = BUILTIN.parents[1]/'photo example'/f'photo_{number}_2026-10-18_20-58-33.jpg'
+    if not path.exists():
+        pytest.skip('Original uploads not included in this distribution')
+    frame = cv2.imread(str(path))
+    state, readings, error = recognizer.read(frame, override=2)
+    # 2 is a manual test input, NOT an inferred or annotated opponent count.
+    if number == 6:
+        assert not error
+        assert state.hero == ('Ks', '8d')
+        assert state.board == ('6c', 'Qs', '7s', '5h')
+        assert (state.pot, state.call, state.stack) == (11900, 5500, 13950)
+    else:
+        assert state is None
+        assert error
