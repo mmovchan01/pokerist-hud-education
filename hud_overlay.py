@@ -11,13 +11,16 @@ from tkinter import ttk
 from hand_history import HandLogger
 from poker_coach import Coach, fmt
 from screen import enable_dpi, grab, load_config
-from ui_text import card_text, ev_tone, recommendation_tone, short_name, signed_money
+from plain import make_verdict, pot_line
+from ui_text import card_text, short_name, signed_money
 from ui_theme import PALETTE as P, SUIT_COLORS, apply_theme, card, font, tone_color
 from vision import Recognizer, Stabilizer, TableState, TemplateBank
 
 HUD_WIDTH = 680
-STAT_TITLES = {'equity': 'Эквити', 'odds': 'Pot odds', 'ev': 'EV колла', 'spr': 'SPR'}
-STAT_HINTS = {'equity': 'шанс выиграть вскрытие', 'odds': 'порог для колла', 'ev': 'ожидаемая прибыль', 'spr': 'стек ÷ банк'}
+HUD_HEIGHT = 800
+HUD_HEIGHT_ADVANCED = 1040
+STAT_TITLES = {'equity': 'Ваш шанс выиграть', 'odds': 'Нужно для колла'}
+STAT_HINTS = {'equity': 'примерно столько банка вы получите', 'odds': 'колл окупается, если шанс не ниже'}
 
 
 def replace_latest(channel, item):
@@ -115,7 +118,7 @@ class Pipeline:
 
 
 class HUD:
-    STAT_KEYS = ('equity', 'odds', 'ev', 'spr')
+    STAT_KEYS = ('equity', 'odds')
 
     def __init__(self, args):
         enable_dpi()
@@ -145,14 +148,15 @@ class HUD:
         self.album_worker = self.album_hotkey = None
         self.record_enabled = tk.BooleanVar(value=False)
         self.record_status = tk.StringVar(value='Сбор выключен. Включите F8 или нажимайте «Снимок в очередь».')
-        self.teaching = tk.BooleanVar(value=True)
         self.hide_answer = tk.BooleanVar(value=False)
+        self.advanced_visible = False
         self.status = tk.StringVar(value='Загрузка…')
         self.opponents = tk.StringVar(value='авто')
         self.made = tk.StringVar(value='Ваша рука: —')
         self.recommendation = tk.StringVar(value='Ждём стабильный кадр')
+        self.summary = tk.StringVar(value='Подсказка появится, когда карты и числа распознаны уверенно.')
         self.pot_line = tk.StringVar(value='')
-        self.confidence = tk.StringVar(value='Уверенность распознавания: —')
+        self.confidence = tk.StringVar(value='Распознавание: ещё не запущено')
         self.mode_text = tk.StringVar(value='')
         self.stat_values = {key: tk.StringVar(value='—') for key in self.STAT_KEYS}
         self.stat_hints = {key: tk.StringVar(value=STAT_HINTS[key]) for key in self.STAT_KEYS}
@@ -185,25 +189,24 @@ class HUD:
         title.pack(side='left')
         self.mode_badge = tk.Label(head, textvariable=self.mode_text, bg=P['muted'], fg=P['bg'], font=font(8, 'bold'), padx=9, pady=3)
         self.mode_badge.pack(side='left', padx=12)
-        ttk.Checkbutton(head, text='Закрепить HUD поверх всех окон', variable=self.pinned,
+        ttk.Checkbutton(head, text='Поверх окон', variable=self.pinned,
                         command=lambda: self.root.attributes('-topmost', self.pinned.get())).pack(side='right')
         for widget in (head, title):
             widget.bind('<ButtonPress-1>', self._drag_start)
             widget.bind('<B1-Motion>', self._drag_move)
-        tk.Label(self.root, text='Перетащите заголовок в сторону, чтобы HUD не закрывал стол. Подсказки не нажимают кнопки.',
-                 bg=P['bg'], fg=P['muted'], font=font(9), anchor='w').pack(fill='x', padx=16, pady=(0, 8))
+        tk.Label(self.root, text='Перетащите заголовок, чтобы HUD не закрывал стол. Подсказки никогда не нажимают кнопки игры.',
+                 bg=P['bg'], fg=P['muted'], font=font(9), anchor='w', wraplength=640, justify='left').pack(fill='x', padx=16, pady=(0, 8))
 
         table = card(self.root)
         table.pack(fill='x', padx=14)
         row = tk.Frame(table, bg=P['surface'])
         row.pack(fill='x')
-        tk.Label(row, text='Оппоненты:', bg=P['surface'], fg=P['muted'], font=font(10)).pack(side='left')
+        tk.Label(row, text='Соперников в игре:', bg=P['surface'], fg=P['muted'], font=font(10)).pack(side='left')
         ttk.Button(row, text='−', width=3, style='Card.TButton', command=lambda: self.adjust(-1)).pack(side='left', padx=(10, 2))
         tk.Label(row, textvariable=self.opponents, bg=P['surface'], fg=P['text'], font=font(11, 'bold'), width=12).pack(side='left')
         ttk.Button(row, text='+', width=3, style='Card.TButton', command=lambda: self.adjust(1)).pack(side='left', padx=2)
         ttk.Button(row, text='Авто', style='Card.TButton', command=self.auto).pack(side='left', padx=8)
-        ttk.Checkbutton(row, text='Обучение', variable=self.teaching, style='Card.TCheckbutton', command=self.redraw).pack(side='right')
-        ttk.Checkbutton(table, text='Тренировка: скрыть расчёт (снимите галочку для ответа)', variable=self.hide_answer,
+        ttk.Checkbutton(table, text='Тренировка: скрыть ответ, сначала решите сами', variable=self.hide_answer,
                         style='Card.TCheckbutton', command=self.redraw).pack(anchor='w', pady=(8, 0))
 
         hand = card(self.root)
@@ -211,39 +214,53 @@ class HUD:
         self.cards = tk.Frame(hand, bg=P['surface'])
         self.cards.pack(fill='x')
 
-        stats = tk.Frame(self.root, bg=P['bg'])
-        stats.pack(fill='x', padx=14)
+        verdict = card(self.root, padding=(16, 12))
+        verdict.pack(fill='x', padx=14)
+        tk.Label(verdict, text='ЧТО ДЕЛАТЬ', bg=P['surface'], fg=P['muted'], font=font(9, 'bold'), anchor='w').pack(fill='x')
+        self.reco_label = tk.Label(verdict, textvariable=self.recommendation, bg=P['surface'], fg=P['text'],
+                                   font=font(18, 'bold'), anchor='w', justify='left', wraplength=620)
+        self.reco_label.pack(fill='x', pady=(2, 0))
+        tk.Label(verdict, textvariable=self.summary, bg=P['surface'], fg=P['text'], font=font(10), anchor='w',
+                 justify='left', wraplength=620).pack(fill='x', pady=(4, 10))
+        facts = tk.Frame(verdict, bg=P['surface'])
+        facts.pack(fill='x')
         for column, key in enumerate(self.STAT_KEYS):
-            stats.grid_columnconfigure(column, weight=1, uniform='stats')
-            tile = card(stats, padding=(10, 8))
-            tile.grid(row=0, column=column, sticky='nsew', padx=4)
+            facts.grid_columnconfigure(column, weight=1, uniform='facts')
+            tile = card(facts, padding=(10, 8))
+            tile.grid(row=0, column=column, sticky='nsew', padx=(0 if column == 0 else 6, 0))
             tk.Label(tile, text=STAT_TITLES[key], bg=P['surface'], fg=P['muted'], font=font(9, 'bold'), anchor='w').pack(fill='x')
             value = ttk.Label(tile, textvariable=self.stat_values[key], style='CardValue.TLabel')
             value.pack(anchor='w')
             self.stat_labels[key] = value
             tk.Label(tile, textvariable=self.stat_hints[key], bg=P['surface'], fg=P['muted'], font=font(8),
-                     wraplength=140, justify='left', anchor='w').pack(fill='x')
+                     wraplength=260, justify='left', anchor='w').pack(fill='x')
+        tk.Label(verdict, textvariable=self.made, bg=P['surface'], fg=P['muted'], font=font(9), anchor='w').pack(fill='x', pady=(8, 0))
+        tk.Label(verdict, textvariable=self.confidence, bg=P['surface'], fg=P['muted'], font=font(8), anchor='w',
+                 justify='left', wraplength=620).pack(fill='x', pady=(2, 0))
         tk.Label(self.root, textvariable=self.pot_line, bg=P['bg'], fg=P['muted'], font=font(9), anchor='w').pack(fill='x', padx=18, pady=(6, 0))
 
-        reco = card(self.root, padding=(14, 10))
-        reco.pack(fill='x', padx=14, pady=8)
-        tk.Label(reco, textvariable=self.made, bg=P['surface'], fg=P['muted'], font=font(9), anchor='w').pack(fill='x')
-        self.reco_label = tk.Label(reco, textvariable=self.recommendation, bg=P['surface'], fg=P['text'],
-                                   font=font(13, 'bold'), anchor='w', justify='left', wraplength=600)
-        self.reco_label.pack(fill='x', pady=(4, 0))
-        tk.Label(reco, textvariable=self.confidence, bg=P['surface'], fg=P['muted'], font=font(8), anchor='w',
-                 justify='left', wraplength=600).pack(fill='x', pady=(6, 0))
-
-        # Bottom rows are packed before the expanding explanation box.
+        # Bottom rows are packed before the optional advanced panel, which expands last.
         tk.Label(self.root, textvariable=self.status, bg=P['surface_alt'], fg=P['text'], font=font(9), anchor='w',
                  justify='left', wraplength=640, padx=12, pady=6).pack(side='bottom', fill='x')
         controls = tk.Frame(self.root, bg=P['bg'])
         controls.pack(side='bottom', fill='x', padx=14, pady=(6, 8))
         ttk.Button(controls, text='Тестовая раздача', command=self.demo).pack(side='left')
         ttk.Button(controls, text='Вернуться к столу', style='Accent.TButton', command=self.live).pack(side='left', padx=6)
-        ttk.Button(controls, text='Скриншот в базу шаблонов', command=self.collect).pack(side='left')
-        recorder = card(self.root, padding=(12, 8))
-        recorder.pack(side='bottom', fill='x', padx=14, pady=(0, 6))
+        ttk.Button(controls, text='Уроки и словарь', command=self.open_learning).pack(side='left')
+        self.advanced_button = ttk.Button(controls, text='Подробнее ▾', command=self.toggle_advanced)
+        self.advanced_button.pack(side='right')
+
+        # Hidden by default: the maths and the screenshot tools are for later.
+        self.advanced = tk.Frame(self.root, bg=P['bg'])
+        tk.Label(self.advanced, text='Подробные расчёты: для тех, кто хочет понять математику. Основное решение — выше.',
+                 bg=P['bg'], fg=P['muted'], font=font(9), anchor='w', wraplength=640, justify='left').pack(fill='x')
+        self.details = tk.Text(self.advanced, wrap='word', height=8, bg=P['field'], fg=P['text'], font=font(10),
+                               relief='flat', padx=14, pady=10, spacing1=2, spacing3=5,
+                               highlightthickness=1, highlightbackground=P['border'], highlightcolor=P['border'])
+        self.details.config(state='disabled')
+        self.details.pack(fill='both', expand=True, pady=(4, 0))
+        recorder = card(self.advanced, padding=(12, 8))
+        recorder.pack(fill='x', pady=(8, 0))
         top = tk.Frame(recorder, bg=P['surface'])
         top.pack(fill='x')
         ttk.Checkbutton(top, text='F8: копить снимки Texas Poker', variable=self.record_enabled,
@@ -251,12 +268,22 @@ class HUD:
         ttk.Button(top, text='Снимок в очередь', style='Card.TButton', command=self.record_snapshot).pack(side='right')
         tk.Label(recorder, textvariable=self.record_status, bg=P['surface'], fg=P['muted'], font=font(9),
                  wraplength=620, justify='left', anchor='w').pack(fill='x', pady=(6, 0))
+        ttk.Button(self.advanced, text='Скриншот в базу шаблонов', command=self.collect).pack(anchor='w', pady=(8, 0))
 
-        self.details = tk.Text(self.root, wrap='word', height=8, bg=P['field'], fg=P['text'], font=font(10),
-                               relief='flat', padx=14, pady=10, spacing1=2, spacing3=5,
-                               highlightthickness=1, highlightbackground=P['border'], highlightcolor=P['border'])
-        self.details.config(state='disabled')
-        self.details.pack(fill='both', expand=True, padx=14, pady=(0, 6))
+    def toggle_advanced(self):
+        self.advanced_visible = not self.advanced_visible
+        if self.advanced_visible:
+            self.advanced.pack(fill='both', expand=True, padx=14, pady=(0, 6))
+            self.advanced_button.config(text='Скрыть подробности ▴')
+            self.root.geometry(f'{HUD_WIDTH}x{HUD_HEIGHT_ADVANCED}')
+        else:
+            self.advanced.pack_forget()
+            self.advanced_button.config(text='Подробнее ▾')
+            self.root.geometry(f'{HUD_WIDTH}x{HUD_HEIGHT}')
+
+    def open_learning(self):
+        from learn_window import LearnWindow
+        LearnWindow(self.root, templates=self.args.templates)
 
     def _drag_start(self, event):
         self.drag_origin = (event.x_root-self.root.winfo_x(), event.y_root-self.root.winfo_y())
@@ -266,11 +293,11 @@ class HUD:
 
     def refresh_mode(self):
         if self.demo_mode:
-            text, tone = 'ТРЕНАЖЁР', 'warn'
+            text, tone = 'ТРЕНИРОВКА', 'warn'
         elif self.pipeline is None:
-            text, tone = 'НЕТ ЗАХВАТА', 'bad'
+            text, tone = 'НЕТ СТОЛА', 'bad'
         else:
-            text, tone = 'СТОЛ • LIVE', 'good'
+            text, tone = 'СТОЛ ВИДЕН', 'good'
         self.mode_text.set(text)
         self.mode_badge.config(bg=tone_color(tone))
 
@@ -351,7 +378,7 @@ class HUD:
         token = self.demo_token
         self.current = None
         self.redraw()
-        self.status.set('ТЕСТ: сначала оцените ауты и Call / (Pot + Call) в уме. Расчёт…')
+        self.status.set('ТЕСТ: сначала прикиньте свой шанс и сравните с порогом колла. Расчёт…')
         def work():
             try:
                 self.demo_results.put((token, state, self.coach.analyze(state), None))
@@ -374,7 +401,7 @@ class HUD:
             self.current = self.last_live[1:]
             self.safe_log(lambda: self.logger.observe(*self.current))
         self.redraw()
-        self.status.set('Режим стола: ждём два одинаковых валидных кадра подряд.')
+        self.status.set('Режим стола: ждём два одинаковых распознанных кадра подряд.')
 
     def collect(self):
         frame = self.pipeline.snapshot() if self.pipeline else None
@@ -394,8 +421,7 @@ class HUD:
 
     @staticmethod
     def pot_text(state):
-        return (f'Банк {fmt(state.pot)} · колл {fmt(state.call)} · стек {fmt(state.stack)} · '
-                f'оппонентов {state.opponents}')
+        return pot_line(state)
 
     def clear_cards(self):
         for child in self.cards.winfo_children():
@@ -426,30 +452,29 @@ class HUD:
         if hidden or result is None:
             for key in self.STAT_KEYS:
                 self.stat_values[key].set('?' if hidden else '—')
-                self.stat_hints[key].set('считайте сами' if hidden else STAT_HINTS[key])
+                self.stat_hints[key].set('прикиньте сами' if hidden else STAT_HINTS[key])
                 self.stat_labels[key].config(foreground=P['text'])
             return
-        equity = result.equity
-        spr = f'{result.spr:.1f}' if result.spr is not None else 'н/д'
-        ev_hint = f'{result.ev_pot_percent:+.1f}% от банка' if result.ev_pot_percent is not None else STAT_HINTS['ev']
-        rows = {
-            'equity': (f'{equity.equity*100:.1f}%', f'±{equity.error95*100:.1f} п.п. (95%)', 'text'),
-            'odds': (f'{result.pot_odds:.1f}%', STAT_HINTS['odds'], 'text'),
-            'ev': (signed_money(result.ev, fmt), ev_hint, ev_tone(result.ev)),
-            'spr': (spr, STAT_HINTS['spr'], 'text'),
-        }
+        equity = result.equity.equity*100
+        if state.call == 0:
+            rows = {'equity': (f'около {equity:.0f}%', STAT_HINTS['equity'], 'text'),
+                    'odds': ('колла нет', 'вы ничего не доплачиваете', 'text')}
+        else:
+            need = result.pot_odds
+            tone = 'good' if equity > need else 'bad'
+            rows = {'equity': (f'около {equity:.0f}%', STAT_HINTS['equity'], tone),
+                    'odds': (f'от {need:.0f}%', STAT_HINTS['odds'], 'text')}
         for key, (value, hint, tone) in rows.items():
             self.stat_values[key].set(value)
             self.stat_hints[key].set(hint)
             self.stat_labels[key].config(foreground=tone_color(tone))
 
     def explanation(self, result):
-        if not self.teaching.get():
-            return ('Компактный режим: видна только рекомендация. '
-                    'Включите «Обучение», чтобы увидеть объяснение, ауты и префлоп.')
         outs = ' '.join(card_text(code) for code in result.draws.outs) or 'нет'
-        return (f'{result.explanation}\n\n{result.preflop}\n\nКарты-ауты: {outs}\n\n'
-                'Не складывайте ауты разных дро: пересечения уже исключены. Попасть в аут ≠ выиграть раздачу.')
+        return (f'{result.explanation}\n\nСтартовая рука: {result.preflop}\n\n'
+                f'Карты, которые улучшат руку (аутсы): {outs}\n\n'
+                f'Выгода колла (EV): {signed_money(result.ev, fmt)}. '
+                'Значение терминов — в разделе «Уроки и словарь».')
 
     def redraw(self):
         hidden = bool(self.current and self.demo_mode and self.hide_answer.get())
@@ -461,11 +486,13 @@ class HUD:
             tone = 'muted'
             if self.demo_mode:
                 self.recommendation.set('Тестовая раздача: расчёт…')
-                text = 'Тестовый расчёт готовится. Сначала оцените шансы самостоятельно.'
+                self.summary.set('Сначала прикиньте сами: сильна ли рука и выгоден ли колл. Ответ появится через секунду.')
+                text = 'Подробный расчёт появится после тестовой раздачи.'
             else:
-                self.recommendation.set('Нет актуального расчёта')
-                text = ('Рекомендации при неуверенном распознавании скрыты. Они появятся, когда карты и числа '
-                        'распознаются стабильно: нужны два одинаковых кадра подряд.')
+                self.recommendation.set('Пока нет ответа')
+                self.summary.set('Подсказка появится, когда карты и числа распознаны уверенно: '
+                                 'нужны два одинаковых кадра подряд.')
+                text = 'Здесь появятся подробные расчёты: шансы, дро и выгода колла.'
         else:
             state, result = self.current
             self.draw_cards(state)
@@ -474,14 +501,17 @@ class HUD:
             self.pot_line.set(self.pot_text(state))
             if hidden:
                 self.set_stats(state, None, hidden=True)
-                self.recommendation.set('Ответ скрыт — посчитайте сами')
+                self.recommendation.set('Ответ скрыт')
+                self.summary.set('Прикиньте сами: какой у вас шанс и нужен ли колл. '
+                                 'Снимите галочку «Тренировка», чтобы проверить себя.')
                 tone = 'muted'
-                text = ('Посчитайте ауты (без дублей), шансы банка и порог безубыточности. '
-                        'Снимите галочку «Тренировка: скрыть расчёт», чтобы проверить ответ.')
+                text = 'Ответ скрыт в режиме тренировки.'
             else:
+                verdict = make_verdict(state, result)
                 self.set_stats(state, result)
-                self.recommendation.set(result.recommendation)
-                tone = recommendation_tone(result.recommendation)
+                self.recommendation.set(verdict.headline)
+                self.summary.set(f'{verdict.summary}\n{verdict.caveat}')
+                tone = verdict.tone
                 text = self.explanation(result)
         self.reco_label.config(fg=tone_color(tone))
         self.set_details(text)
@@ -525,9 +555,10 @@ class HUD:
                 elif kind == 'status' and not self.demo_mode:
                     readings, status = data
                     self.status.set(status)
-                    self.confidence.set('Уверенность распознавания: ' + ' · '.join(
-                        f'{short_name(n)} {r.value if r.value is not None else r.status} {r.confidence*100:.0f}%'
-                        for n, r in readings.items() if n.startswith(('hero', 'board'))))
+                    unsure = [short_name(n) for n, r in readings.items()
+                              if n.startswith(('hero', 'board')) and r.status == 'unknown']
+                    self.confidence.set('Распознавание: карты видны уверенно' if not unsure
+                                        else 'Программа не уверена в: ' + ', '.join(unsure))
                     if self.pipeline.signature is None:
                         self.current = None
                         self.redraw()
@@ -556,8 +587,8 @@ class HUD:
             else:
                 self.current = state, result
                 self.safe_log(lambda: self.logger.observe(state, result, 'demo'))
-                self.status.set('ТЕСТ — сравните свой ответ с расчётом. Не является результатом распознавания экрана.')
-                self.confidence.set('Уверенность распознавания: тестовые карты заданы, CV не используется')
+                self.status.set('ТЕСТ: сравните свой ответ с подсказкой. Это не распознавание экрана.')
+                self.confidence.set('Распознавание не используется: карты заданы для тренировки')
                 self.redraw()
         self.root.after(100, self.poll)
 

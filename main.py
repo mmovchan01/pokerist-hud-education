@@ -6,6 +6,7 @@ from pathlib import Path
 def main():
     parser = argparse.ArgumentParser(description="Pokerist: visual poker math trainer")
     mode = parser.add_mutually_exclusive_group()
+    mode.add_argument('--learn', action='store_true', help='Lessons, glossary and recognition report; no table setup needed')
     mode.add_argument('--record', action='store_true', help='Collect game-window screenshots with F8')
     mode.add_argument('--label', action='store_true', help='Offline screenshot album and card labelling editor')
     mode.add_argument('--calibrate', action='store_true')
@@ -33,7 +34,10 @@ def main():
         for seconds in range(args.delay, 0, -1):
             print(f'Switch to the game: capture in {seconds}s', flush=True)
             time.sleep(1)
-    if args.record:
+    if args.learn:
+        from learn_window import LearnWindow
+        LearnWindow().run()
+    elif args.record:
         from batch_capture import BatchCapture
         BatchCapture(args).run()
     elif args.label:

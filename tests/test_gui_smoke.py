@@ -89,7 +89,7 @@ class Style(Widget):
 def fake_tkinter(monkeypatch):
     tk = ModuleType('tkinter')
     ttk = ModuleType('tkinter.ttk')
-    for name in ('Frame', 'Label', 'Button', 'Checkbutton', 'Entry', 'Combobox', 'Scrollbar', 'Treeview'):
+    for name in ('Frame', 'Label', 'Button', 'Checkbutton', 'Entry', 'Combobox', 'Scrollbar', 'Treeview', 'Notebook'):
         setattr(ttk, name, type(name, (Widget,), {}))
     ttk.Style = Style
     for name in ('Tk', 'Frame', 'Label', 'Button', 'Canvas', 'Text', 'Toplevel', 'Listbox', 'Entry', 'Checkbutton'):
@@ -126,7 +126,8 @@ def test_hud_demo_flow_and_states(monkeypatch, tmp_path):
     hud = hud_module.HUD(args)  # no config -> falls back to the demo table
     hud.logger.path = tmp_path/'hands_log.csv'  # never write the real log from tests
     assert hud.demo_mode
-    assert hud.mode_text.get() == 'ТРЕНАЖЁР'
+    assert hud.mode_text.get() == 'ТРЕНИРОВКА'
+    assert not hud.advanced_visible
 
     state = TableState(('Ac', 'Kd'), ('Qh', '7s', '2d'), 9000, 100000, 3000, 3, 100000)
     hud.submit_demo(state)
@@ -135,27 +136,54 @@ def test_hud_demo_flow_and_states(monkeypatch, tmp_path):
         hud.poll()
         time.sleep(.05)
     assert hud.current is not None
-    assert hud.recommendation.get()
-    assert hud.stat_values['equity'].get().endswith('%')
-    assert hud.stat_values['spr'].get() != '—'
+    assert hud.recommendation.get() in ('Колл выгоден', 'Пас: колл не окупается', 'Решение почти безразлично')
+    assert hud.summary.get()
+    assert hud.stat_values['equity'].get().startswith('около ')
+    assert hud.stat_values['odds'].get().startswith('от ')
 
     hud.hide_answer.set(True)
     hud.redraw()
     assert hud.stat_values['equity'].get() == '?'
-    assert hud.recommendation.get() == 'Ответ скрыт — посчитайте сами'
+    assert hud.recommendation.get() == 'Ответ скрыт'
 
     hud.hide_answer.set(False)
-    hud.teaching.set(False)
-    hud.redraw()  # compact mode must not crash and keeps the headline recommendation
-    assert hud.recommendation.get() != 'Ответ скрыт — посчитайте сами'
-    hud.teaching.set(True)
+    hud.redraw()
+    assert hud.recommendation.get() != 'Ответ скрыт'
+    hud.toggle_advanced()
+    assert hud.advanced_visible and hud.advanced_button.options.get('text') == 'Скрыть подробности ▴'
+    hud.toggle_advanced()
+    assert not hud.advanced_visible
     hud.adjust(1)
     assert hud.opponents.get().endswith('вручную')
     hud.auto()
     assert hud.opponents.get() == 'авто'
     hud.live()
     assert 'Нет захвата' in hud.status.get()
+    hud.open_learning()  # opens the lessons window as a child of the HUD
     hud.close()
+
+
+def test_learn_window_runs_lesson_and_saves_progress(monkeypatch, tmp_path):
+    learn_module = load(monkeypatch, 'learn_window')
+    progress_file = tmp_path/'progress.json'
+    window = learn_module.LearnWindow(None, progress_path=progress_file, templates=tmp_path/'none')
+    lesson = learn_module.LESSONS[1]
+    window.start_lesson(lesson)
+    assert len(window.session) == learn_module.QUESTIONS_PER_LESSON
+
+    # One answer per question: a second click must not change the score.
+    window.answer(window.session[0].correct)
+    window.answer(window.session[0].correct)
+    assert window.correct == 1 and window.answered
+    window.next_question()
+    for question in window.session[1:]:
+        window.answer(question.correct)
+        window.next_question()
+    assert window.correct == learn_module.QUESTIONS_PER_LESSON  # every answer was the right option
+    assert window.progress.best(lesson.id) == learn_module.QUESTIONS_PER_LESSON
+    assert progress_file.exists()
+    assert window.progress.passed(lesson.id) == (window.correct >= learn_module.PASS_MARK)
+    window.refresh_report()  # no templates yet: the window must still render text, not crash
 
 
 def test_launcher_builds_and_reports_next_step(monkeypatch):
