@@ -1,0 +1,10 @@
+__pycache__/
+.pytest_cache/
+.venv/
+config.json
+/templates/
+hands_log.csv
+captures/
+
+config.json.bak
+logs/
