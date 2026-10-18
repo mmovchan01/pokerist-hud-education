@@ -12,9 +12,10 @@ from screenshot_album import Album, read_image
 from setup_support import selection_bounds, preview_scale
 from profile_support import load_profile
 
-from card_choices import CARD_CHOICES, choice_color, display_choice, resolve_choice, filtered_choices
+from card_choices import choice_color, display_choice, resolve_choice, filtered_choices
 from color_choice import ColorChoice
 from editor_assistant import EditorAssistant, has_card_template
+from ui_theme import PALETTE as P, apply_theme, font
 
 
 class AlbumEditor:
@@ -22,6 +23,7 @@ class AlbumEditor:
         enable_dpi()
         self.album = Album(args.album, args.templates)
         self.root = tk.Tk()
+        apply_theme(self.root)
         self.root.title('Редактор накопленных снимков — подпись шаблонов')
         self.root.geometry(f'{min(1180, self.root.winfo_screenwidth()-40)}x{min(850, self.root.winfo_screenheight()-80)}')
         self.record = self.image = self.item_id = self.pending_rect = None
@@ -35,7 +37,7 @@ class AlbumEditor:
         self.executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix='label-assistant')
         self.analysis_future = None
         self.analysis_results = queue.Queue()
-        self.status = tk.StringVar(value='Выберите снимок слева. Затем область и карту из списка.')
+        self.status = tk.StringVar(value='Шаг 1: выберите снимок слева. Шаг 2: выделите область мышью или выберите её в списке. Шаг 3: укажите карту и нажмите Enter.')
         self.kind = tk.StringVar(value='card')
         self.label = tk.StringVar()
         self.only_pending = tk.BooleanVar(value=False)
@@ -72,7 +74,7 @@ class AlbumEditor:
         scrollbar = ttk.Scrollbar(left, orient='vertical', command=self.frames.yview)
         scrollbar.pack(side='right', fill='y')
         self.frames.config(yscrollcommand=scrollbar.set)
-        self.canvas = tk.Canvas(right, background='#142b38', height=420, highlightthickness=0)
+        self.canvas = tk.Canvas(right, background=P['field'], height=420, highlightthickness=0)
         self.canvas.pack(fill='x')
         self.canvas.bind('<ButtonPress-1>', self.down)
         self.canvas.bind('<B1-Motion>', self.drag)
@@ -86,6 +88,12 @@ class AlbumEditor:
         self.items.bind('<<ComboboxSelected>>', self.change_item)
         ttk.Button(line, text='Добавить выделение', command=self.add_region).pack(side='left')
         ttk.Label(right, text='Можно поправить рамку мышью. Для цифр: выделите один символ, сохранив высоту строки.', wraplength=850).pack(anchor='w')
+        legend = tk.Frame(right, bg=P['bg'])
+        legend.pack(anchor='w', pady=(2, 0))
+        tk.Label(legend, text='Цвет рамки:', bg=P['bg'], fg=P['muted'], font=font(9)).pack(side='left')
+        for color, text in ((P['warn'], 'ждёт подписи'), (P['good'], 'подписана'), (P['info'], 'взята из базы'), (P['muted'], 'пропущена')):
+            tk.Label(legend, text='■ ', bg=P['bg'], fg=color, font=font(11)).pack(side='left')
+            tk.Label(legend, text=text + '   ', bg=P['bg'], fg=P['muted'], font=font(9)).pack(side='left')
         controls = ttk.Frame(right)
         controls.pack(fill='x', pady=6)
         self.kind_picker = ttk.Combobox(controls, textvariable=self.kind, values=['card', 'empty', 'back', 'glyph'], state='readonly', width=9)
@@ -93,7 +101,7 @@ class AlbumEditor:
         self.kind_picker.bind('<<ComboboxSelected>>', lambda e: self.set_choices())
         self.label_picker = ColorChoice(controls, textvariable=self.label, color=choice_color, width=20)
         self.label_picker.pack(side='left', padx=6)
-        ttk.Button(controls, text='Сохранить → дальше (Enter)', command=self.save_next).pack(side='left')
+        ttk.Button(controls, text='Сохранить → дальше (Enter)', style='Accent.TButton', command=self.save_next).pack(side='left')
         ttk.Button(controls, text='Нечитаемо / пропустить', command=self.skip).pack(side='left', padx=5)
         ttk.Checkbutton(right, text='Добавлять новые образцы уже известных карт (другое освещение / перекрытие)', variable=self.add_variants, command=self.toggle_assistant).pack(anchor='w')
         self.preview = ttk.Label(right)
@@ -255,7 +263,7 @@ class AlbumEditor:
         self.canvas.create_image(0, 0, anchor='nw', image=self.photo)
         for name, item in self.record['items'].items():
             x, y, cw, ch = Rect(*item['rect']).pixels(self.photo.width(), self.photo.height())
-            color = {'exported': '#30dd99', 'reused': '#65b9ff', 'skipped': '#888888'}.get(item['status'], '#f1b942')
+            color = {'exported': P['good'], 'reused': P['info'], 'skipped': P['muted']}.get(item['status'], P['warn'])
             self.canvas.create_rectangle(x, y, x+cw, y+ch, outline=color)
             self.canvas.create_text(x, y, text=name, anchor='sw', fill=color)
 
@@ -271,7 +279,7 @@ class AlbumEditor:
         self.set_choices(item.get('label'))
         self.render()
         x, y, w, h = Rect(*item['rect']).pixels(self.photo.width(), self.photo.height())
-        self.box = self.canvas.create_rectangle(x, y, x+w, y+h, outline='#ffffff', width=2, tags='selection')
+        self.box = self.canvas.create_rectangle(x, y, x+w, y+h, outline=P['text'], width=2, tags='selection')
         self.show_crop(item['rect'])
         self.status.set(f'{name}: {item["status"]}. '+('Зоны предложены автоматически — проверьте рамки! ' if self.record.get('suggested_rois') else '')+'Выберите метку и нажмите Enter. Пустой слот: пункт «Пусто» в списке карт; анимация/перекрытие: пропустить.')
         self.request_analysis()
@@ -301,7 +309,7 @@ class AlbumEditor:
         self.cancel_analysis()
         self.start = event.x, event.y
         self.canvas.delete('selection')
-        self.box = self.canvas.create_rectangle(event.x, event.y, event.x, event.y, outline='white', width=2, tags='selection')
+        self.box = self.canvas.create_rectangle(event.x, event.y, event.x, event.y, outline=P['text'], width=2, tags='selection')
 
     def drag(self, event):
         if self.start:

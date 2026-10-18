@@ -14,6 +14,8 @@ from setup_support import selection_bounds, preview_scale
 from config_io import save_config
 from capture_ui import fresh_capture
 from template_labels import label_folder
+from ui_text import KIND_TITLES, kind_choice, kind_from_choice, roi_choice, roi_from_choice
+from ui_theme import PALETTE as P, apply_theme
 
 ROI_NAMES = ['hero1', 'hero2', *[f'board{i}' for i in range(1, 6)],
              'pot', 'stack', 'call', *[f'opp{i}' for i in range(1, 9)],
@@ -58,28 +60,33 @@ class Collector(tk.Toplevel):
         self.rois = rois or {}
         self.capture = capture
         self.kind = tk.StringVar(value='card')
+        self.kind_text = tk.StringVar(value=kind_choice('card'))
         self.label = tk.StringVar()
         self.status = tk.StringVar(value='Пустые края карт обрезайте одинаково; цифры выделяйте по одному символу.')
-        bar = ttk.Frame(self)
+        bar = ttk.Frame(self, padding=(10, 8, 10, 4))
         bar.pack(fill='x')
-        kind_picker = ttk.Combobox(bar, textvariable=self.kind, values=['card', 'glyph', 'back', 'empty'], width=8, state='readonly')
-        kind_picker.pack(side='left')
-        kind_picker.bind('<<ComboboxSelected>>', lambda e: self.suggest_label())
+        ttk.Label(bar, text='Тип:').pack(side='left')
+        kind_picker = ttk.Combobox(bar, textvariable=self.kind_text, values=[kind_choice(k) for k in KIND_TITLES], width=22, state='readonly')
+        kind_picker.pack(side='left', padx=(4, 10))
+        kind_picker.bind('<<ComboboxSelected>>', lambda e: self.pick_kind(kind_from_choice(self.kind_text.get())))
         self.roi_name = tk.StringVar()
-        roi_picker = ttk.Combobox(bar, textvariable=self.roi_name, values=list(self.rois), width=12, state='readonly')
-        roi_picker.pack(side='left')
-        roi_picker.bind('<<ComboboxSelected>>', lambda e: self.select_roi())
+        self.roi_text = tk.StringVar()
+        ttk.Label(bar, text='Зона:').pack(side='left')
+        roi_picker = ttk.Combobox(bar, textvariable=self.roi_text, values=[roi_choice(n) for n in self.rois], width=34, state='readonly')
+        roi_picker.pack(side='left', padx=(4, 10))
+        roi_picker.bind('<<ComboboxSelected>>', lambda e: self.choose_roi(roi_from_choice(self.roi_text.get())))
+        ttk.Label(bar, text='Подпись:').pack(side='left')
         self.entry = ttk.Entry(bar, textvariable=self.label, width=14)
-        self.entry.pack(side='left')
-        ttk.Button(bar, text='Сохранить (Enter)', command=self.save).pack(side='left')
+        self.entry.pack(side='left', padx=(4, 10))
+        ttk.Button(bar, text='Сохранить (Enter)', style='Accent.TButton', command=self.save).pack(side='left')
         if capture:
-            ttk.Button(bar, text='Новый кадр (3 с)', command=self.refresh).pack(side='left')
+            ttk.Button(bar, text='Новый кадр (3 с)', command=self.refresh).pack(side='left', padx=6)
         ttk.Button(bar, text='Следующая зона', command=self.next_roi).pack(side='left')
-        ttk.Label(self, textvariable=self.status, wraplength=1050).pack()
+        ttk.Label(self, textvariable=self.status, style='Status.TLabel', wraplength=1050).pack(fill='x', padx=10, pady=(0, 6))
         self.scale = preview_scale(image.shape[1], image.shape[0], self.winfo_screenwidth(), self.winfo_screenheight())
         rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         self.photo = ImageTk.PhotoImage(Image.fromarray(rgb).resize((round(image.shape[1]*self.scale), round(image.shape[0]*self.scale))))
-        self.canvas = tk.Canvas(self, width=self.photo.width(), height=self.photo.height())
+        self.canvas = tk.Canvas(self, width=self.photo.width(), height=self.photo.height(), bg=P['field'], highlightthickness=0)
         self.canvas.pack()
         self.canvas.create_image(0, 0, anchor='nw', image=self.photo)
         self.canvas.bind('<ButtonPress-1>', self.down)
@@ -88,8 +95,20 @@ class Collector(tk.Toplevel):
         self.bind('<Return>', lambda e: self.save())
         self.start = self.box = None
         if self.rois:
-            self.roi_name.set(next(iter(self.rois)))
-            self.select_roi()
+            self.choose_roi(next(iter(self.rois)))
+
+    def pick_kind(self, kind):
+        self.set_kind(kind)
+        self.suggest_label()
+
+    def set_kind(self, kind):
+        self.kind.set(kind)
+        self.kind_text.set(kind_choice(kind))
+
+    def choose_roi(self, name):
+        self.roi_name.set(name)
+        self.roi_text.set(roi_choice(name))
+        self.select_roi()
 
     def suggest_label(self):
         self.label.set({'empty': 'empty', 'back': 'back'}.get(self.kind.get(), ''))
@@ -98,8 +117,7 @@ class Collector(tk.Toplevel):
         names = list(self.rois)
         if names:
             index = names.index(self.roi_name.get()) if self.roi_name.get() in names else -1
-            self.roi_name.set(names[(index+1) % len(names)])
-            self.select_roi()
+            self.choose_roi(names[(index+1) % len(names)])
 
     def refresh(self):
         if self.capture:
@@ -122,9 +140,9 @@ class Collector(tk.Toplevel):
         if values:
             x, y, w, h = Rect(*values).pixels(self.photo.width(), self.photo.height())
             self.canvas.delete('selection')
-            self.box = self.canvas.create_rectangle(x, y, x+w, y+h, outline='#00ff88', width=2, tags='selection')
+            self.box = self.canvas.create_rectangle(x, y, x+w, y+h, outline=P['accent'], width=2, tags='selection')
             name = self.roi_name.get()
-            self.kind.set('glyph' if name in ('pot', 'stack', 'call') or name.startswith('oppstack') else ('back' if name.startswith('opp') else 'card'))
+            self.set_kind('glyph' if name in ('pot', 'stack', 'call') or name.startswith('oppstack') else ('back' if name.startswith('opp') else 'card'))
             self.suggest_label()
             self.status.set(roi_hint(name) + ' Для цифр сузьте выделение до одного символа, сохранив высоту строки.')
             self.entry.focus_set()
@@ -132,7 +150,7 @@ class Collector(tk.Toplevel):
     def down(self, event):
         self.start = (event.x, event.y)
         self.canvas.delete('selection')
-        self.box = self.canvas.create_rectangle(event.x, event.y, event.x, event.y, outline='#00ff88', width=2, tags='selection')
+        self.box = self.canvas.create_rectangle(event.x, event.y, event.x, event.y, outline=P['accent'], width=2, tags='selection')
 
     def drag(self, event):
         if self.start:
@@ -158,6 +176,7 @@ class CalibrationApp:
         self.profile = load_profile(profile_path) if profile_path else None
         self.path, self.template_dir = Path(config_path), template_dir
         self.root = tk.Tk()
+        apply_theme(self.root)
         self.root.title('Калибровка Pokerist')
         self.root.withdraw()
         self.window_title = window_title
@@ -200,18 +219,22 @@ class CalibrationApp:
             self.root.destroy()
             raise
         self.status = tk.StringVar(value='1. Выделите клиентскую область игры (без рамок и HUD).')
-        ttk.Label(self.root, textvariable=self.status, wraplength=1100).pack()
-        toolbar = ttk.Frame(self.root)
+        ttk.Label(self.root, textvariable=self.status, style='Status.TLabel', wraplength=1100).pack(fill='x', padx=10, pady=(8, 4))
+        toolbar = ttk.Frame(self.root, padding=(10, 4))
         toolbar.pack(fill='x')
         self.name = tk.StringVar(value='hero1')
-        ttk.Combobox(toolbar, textvariable=self.name, values=ROI_NAMES, state='readonly').pack(side='left')
+        self.name_text = tk.StringVar(value=roi_choice('hero1'))
+        picker = ttk.Combobox(toolbar, textvariable=self.name_text, values=[roi_choice(n) for n in ROI_NAMES], state='readonly', width=36)
+        picker.pack(side='left')
+        picker.bind('<<ComboboxSelected>>', lambda e: self.choose_name(roi_from_choice(self.name_text.get())))
         self.name.trace_add('write', lambda *args: self.update_hint())
-        ttk.Button(toolbar, text='Новый кадр (3 с)', command=self.refresh).pack(side='left')
-        ttk.Button(toolbar, text='Выбрать область заново', command=self.reselect_client).pack(side='left')
-        ttk.Button(toolbar, text='Сохранить config', command=self.save).pack(side='left')
-        ttk.Button(toolbar, text='Собрать шаблоны', command=self.collect_templates).pack(side='left')
-        ttk.Label(self.root, text='Карты: вся карта; opp: только рубашка; oppstack: необязательно', wraplength=1100).pack()
-        self.canvas = tk.Canvas(self.root)
+        ttk.Button(toolbar, text='Новый кадр (3 с)', command=self.refresh).pack(side='left', padx=(10, 0))
+        ttk.Button(toolbar, text='Выбрать область заново', command=self.reselect_client).pack(side='left', padx=6)
+        ttk.Button(toolbar, text='Сохранить config', style='Accent.TButton', command=self.save).pack(side='left')
+        ttk.Button(toolbar, text='Собрать шаблоны', command=self.collect_templates).pack(side='left', padx=6)
+        ttk.Label(self.root, text='Карты — целиком. Рубашка соперника — только рубашка без имени и аватара. Стек соперника — по желанию.',
+                  style='Muted.TLabel', wraplength=1100).pack(padx=10, anchor='w')
+        self.canvas = tk.Canvas(self.root, bg=P['field'], highlightthickness=0)
         self.canvas.pack()
         self.canvas.bind('<ButtonPress-1>', self.down)
         self.canvas.bind('<B1-Motion>', self.drag)
@@ -221,12 +244,16 @@ class CalibrationApp:
         self.update_hint()
         self.root.deiconify()
 
+    def choose_name(self, name):
+        self.name.set(name)
+        self.name_text.set(roi_choice(name))
+
     def update_hint(self):
         if self.stage == 'client':
             self.status.set('Профиль по вашим скриншотам: выделите ОДИН раз всё изображение игры (верхнее меню и нижние кнопки), без рамок браузера. После этого зоны уже будут расставлены.' if self.profile else '1. Выделите клиентскую область игры. Для точного выбора окна в Windows задайте его заголовок в панели запуска.')
         else:
             missing = set(ROI_NAMES[:10])-self.rois.keys()
-            self.status.set(f'Зон: {len(self.rois)}, обязательных осталось: {len(missing)}. Сейчас {self.name.get()}: {roi_hint(self.name.get())}')
+            self.status.set(f'Зон отмечено: {len(self.rois)}; обязательных осталось: {len(missing)}. Сейчас: {roi_choice(self.name.get())}. {roi_hint(self.name.get())}')
 
     @staticmethod
     def capture_config(config):
@@ -256,7 +283,7 @@ class CalibrationApp:
             self.rois = self.profile['rois'].copy() if self.profile else {}
             self.window_title = ''
             self.stage = 'client'
-            self.name.set('hero1')
+            self.choose_name('hero1')
             self.start = self.box = None
             self.render()
             self.update_hint()
@@ -291,12 +318,12 @@ class CalibrationApp:
         self.canvas.create_image(0, 0, anchor='nw', image=self.photo)
         for name, values in (self.rois.items() if self.stage == 'rois' else []):
             x, y, w, h = Rect(*values).pixels(self.photo.width(), self.photo.height())
-            self.canvas.create_rectangle(x, y, x+w, y+h, outline='#00ee88')
-            self.canvas.create_text(x, y, text=name, anchor='nw', fill='#ff5500')
+            self.canvas.create_rectangle(x, y, x+w, y+h, outline=P['accent'])
+            self.canvas.create_text(x, y, text=name, anchor='nw', fill=P['warn'])
 
     def down(self, e):
         self.start = e.x, e.y
-        self.box = self.canvas.create_rectangle(e.x, e.y, e.x, e.y, outline='red', width=2)
+        self.box = self.canvas.create_rectangle(e.x, e.y, e.x, e.y, outline=P['bad'], width=2)
 
     def drag(self, e):
         if self.start:
@@ -326,7 +353,7 @@ class CalibrationApp:
         else:
             self.rois[self.name.get()] = values
             index = ROI_NAMES.index(self.name.get())
-            self.name.set(ROI_NAMES[min(index+1, len(ROI_NAMES)-1)])
+            self.choose_name(ROI_NAMES[min(index+1, len(ROI_NAMES)-1)])
         self.start = None
         self.update_hint()
         self.render()
@@ -335,7 +362,7 @@ class CalibrationApp:
         required = ROI_NAMES[:10]
         missing = set(required)-self.rois.keys()
         if missing or self.capture is None:
-            messagebox.showerror('Не все зоны', ', '.join(sorted(missing)))
+            messagebox.showerror('Не все зоны', 'Не отмечены обязательные зоны: ' + ', '.join(sorted(missing)) + '.\nВыделите их на снимке и сохраните ещё раз.', parent=self.root)
             return
         title = simpledialog.askstring('Привязка окна', 'Windows: уникальная часть заголовка игры для слежения.\nLinux/macOS: оставьте пустым (фиксированная область).', parent=self.root, initialvalue=self.window_title)
         if title is None:

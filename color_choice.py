@@ -7,6 +7,8 @@ colours, instead of relying on unsupported combobox internals.
 import tkinter as tk
 from tkinter import ttk
 
+from ui_theme import PALETTE as P
+
 
 class ColorChoice(ttk.Frame):
     def __init__(self, parent, textvariable, color, width=20, on_select=None):
@@ -16,7 +18,7 @@ class ColorChoice(ttk.Frame):
         self.values = []
         self.popup = None
         self.button = tk.Button(self, textvariable=textvariable, width=width, anchor='w',
-                                background='white', activebackground='#edf3f8',
+                                background=P['field'], activebackground=P['surface_alt'],
                                 relief='solid', borderwidth=1, command=self.open)
         self.button.pack(side='left', fill='x', expand=True)
         self.arrow = ttk.Button(self, text='▾', width=2, command=self.open)
@@ -54,9 +56,9 @@ class ColorChoice(ttk.Frame):
         popup.transient(self.winfo_toplevel())
         popup.attributes('-topmost', True)
         box = self.box = tk.Listbox(popup, height=min(12, len(self.values)), width=24,
-                                   exportselection=False, background='white',
-                                   selectbackground='#d9eafa', activestyle='dotbox',
-                                   font=('Segoe UI', 11))
+                                   exportselection=False, background=P['field'],
+                                   foreground=P['text'], selectbackground=P['select'],
+                                   activestyle='dotbox', font=('Segoe UI', 11))
         scroll = ttk.Scrollbar(popup, orient='vertical', command=box.yview)
         box.configure(yscrollcommand=scroll.set)
         scroll.pack(side='right', fill='y')

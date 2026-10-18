@@ -1,10 +1,9 @@
-import json
 
 import cv2
 import numpy as np
 import pytest
 
-from screen import Rect, load_config, preprocess
+from screen import Rect
 from vision import (Reading, Recognizer, Stabilizer, TableState, TemplateBank,
                     color_profile, match_score, parse_amount)
 

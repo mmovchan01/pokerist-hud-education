@@ -7,11 +7,15 @@ CARD_CHOICES = {EMPTY_CHOICE: 'empty', **{
     f'{card[0]}{SYMBOLS[card[1]]}  ({card})': card for card in CARD_LABELS}}
 
 
+# Dark-theme friendly: red suits stay red, black suits become light text.
+RED_SUIT, BLACK_SUIT, NEUTRAL = '#ff6b6b', '#e8f3f7', '#8fa9b8'
+
+
 def choice_color(display):
     card = CARD_CHOICES.get(display)
     if card in CARD_LABELS:
-        return '#c62828' if card[1] in 'hd' else '#18212a'
-    return '#52606d'
+        return RED_SUIT if card[1] in 'hd' else BLACK_SUIT
+    return NEUTRAL
 
 
 def display_choice(label):

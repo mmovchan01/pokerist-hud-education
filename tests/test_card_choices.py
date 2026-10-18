@@ -16,8 +16,8 @@ def test_standard_suit_colours_and_selection_mapping():
     for code in ('Ah', 'Kd', 'Qs', 'Jc'):
         display = display_choice(code)
         assert resolve_choice('card', display) == ('card', code)
-        assert choice_color(display) == ('#c62828' if code[1] in 'hd' else '#18212a')
-    assert choice_color(EMPTY_CHOICE) == '#52606d'
+        assert choice_color(display) == ('#ff6b6b' if code[1] in 'hd' else '#e8f3f7')
+    assert choice_color(EMPTY_CHOICE) == '#8fa9b8'
     assert resolve_choice('glyph', '.') == ('glyph', '.')
     assert resolve_choice('back', 'back') == ('back', 'back')
 

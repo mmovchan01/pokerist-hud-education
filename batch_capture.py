@@ -2,10 +2,11 @@
 import tkinter as tk
 from tkinter import ttk
 
+from capture_worker import CaptureWorker
 from global_hotkey import ScreenshotHotkey
 from screen import enable_dpi
 from screenshot_album import Album
-from capture_worker import CaptureWorker
+from ui_theme import PALETTE as P, apply_theme, card, font
 
 
 class BatchCapture:
@@ -14,8 +15,10 @@ class BatchCapture:
         self.args = args
         self.album = Album(args.album, args.templates)
         self.root = tk.Tk()
+        apply_theme(self.root)
         self.root.title('Сбор снимков • F8')  # Deliberately does not match Texas Poker.
-        self.root.geometry('590x380')
+        self.root.geometry('620x520')
+        self.root.minsize(560, 480)
         self.root.protocol('WM_DELETE_WINDOW', self.close)
         self.worker = self.hotkey = None
         self.title = tk.StringVar(value=args.window_title or 'Texas Poker')
@@ -23,19 +26,37 @@ class BatchCapture:
         self.pin = tk.BooleanVar(value=True)
         self.status = tk.StringVar(value='Откройте Texas Poker, нажмите «Включить сбор», затем играйте и нажимайте F8.')
         self.root.attributes('-topmost', True)
-        ttk.Label(self.root, text='Сейчас — снимки. Подписи карт — после игры.', font=('Arial', 14, 'bold')).pack(pady=12)
-        ttk.Label(self.root, text='Заголовок приложения Windows:').pack(anchor='w', padx=15)
-        self.entry = ttk.Entry(self.root, textvariable=self.title)
-        self.entry.pack(fill='x', padx=15)
-        self.key_picker = ttk.Combobox(self.root, textvariable=self.key, values=['F8', 'F9', 'F10'], state='readonly', width=8)
-        self.key_picker.pack(anchor='w', padx=15, pady=8)
-        self.toggle = ttk.Button(self.root, text='Включить сбор', command=self.start)
-        self.toggle.pack(fill='x', padx=15)
-        ttk.Button(self.root, text='Сделать снимок сейчас', command=self.snapshot).pack(fill='x', padx=15, pady=6)
-        ttk.Checkbutton(self.root, text='Поверх всех окон', variable=self.pin,
-                        command=lambda: self.root.attributes('-topmost', self.pin.get())).pack(anchor='w', padx=15)
-        ttk.Label(self.root, textvariable=self.status, wraplength=550).pack(fill='x', padx=15, pady=10)
-        ttk.Label(self.root, text='Можно свернуть это окно: горячая клавиша продолжает работать.\nЗакройте сборщик после сессии и откройте «Редактор накопленных снимков» в панели.', wraplength=550).pack(fill='x', padx=15)
+
+        tk.Label(self.root, text='Сбор снимков F8', bg=P['bg'], fg=P['accent'], font=font(18, 'bold')).pack(anchor='w', padx=22, pady=(20, 0))
+        tk.Label(self.root, text='Снимки окна игры копятся в альбом. Подписи карт делаются позже, в редакторе.',
+                 bg=P['bg'], fg=P['muted'], font=font(10), wraplength=560, justify='left').pack(anchor='w', padx=22, pady=(2, 12))
+
+        panel = card(self.root, padding=(18, 14))
+        panel.pack(fill='x', padx=22)
+        tk.Label(panel, text='Заголовок окна игры (Windows)', bg=P['surface'], fg=P['text'], font=font(10, 'bold')).pack(anchor='w')
+        self.entry = ttk.Entry(panel, textvariable=self.title)
+        self.entry.pack(fill='x', pady=(6, 12))
+        row = tk.Frame(panel, bg=P['surface'])
+        row.pack(fill='x')
+        tk.Label(row, text='Горячая клавиша:', bg=P['surface'], fg=P['text'], font=font(10, 'bold')).pack(side='left')
+        self.key_picker = ttk.Combobox(row, textvariable=self.key, values=['F8', 'F9', 'F10'], state='readonly', width=6)
+        self.key_picker.pack(side='left', padx=10)
+        ttk.Checkbutton(row, text='Поверх всех окон', variable=self.pin, style='Card.TCheckbutton',
+                        command=lambda: self.root.attributes('-topmost', self.pin.get())).pack(side='right')
+
+        buttons = tk.Frame(self.root, bg=P['bg'])
+        buttons.pack(fill='x', padx=22, pady=14)
+        self.toggle = ttk.Button(buttons, text='Включить сбор', style='Accent.TButton', command=self.start)
+        self.toggle.pack(fill='x')
+        ttk.Button(buttons, text='Сделать снимок сейчас', command=self.snapshot).pack(fill='x', pady=(8, 0))
+
+        status = tk.Frame(self.root, bg=P['surface_alt'])
+        status.pack(fill='x', padx=22)
+        tk.Label(status, textvariable=self.status, bg=P['surface_alt'], fg=P['text'], font=font(10),
+                 wraplength=540, justify='left', anchor='w', padx=12, pady=10).pack(fill='x')
+        tk.Label(self.root, text='Окно можно свернуть: горячая клавиша продолжает работать.\n'
+                                 'После сессии закройте сборщик и откройте «Редактор накопленных снимков» в панели.',
+                 bg=P['bg'], fg=P['muted'], font=font(9), wraplength=560, justify='left').pack(anchor='w', padx=22, pady=12)
         self.root.after(100, self.poll)
 
     def start(self):
@@ -44,7 +65,7 @@ class BatchCapture:
             return
         title = self.title.get().strip()
         if not title:
-            self.status.set('Введите заголовок окна игры.')
+            self.status.set('Введите заголовок окна игры — например, Texas Poker.')
             return
         self.worker = CaptureWorker(self.album, self.args.config, title)
         self.hotkey = ScreenshotHotkey(self.worker.request, self.key.get())
@@ -64,13 +85,13 @@ class BatchCapture:
         if self.hotkey:
             if self.hotkey.ready.is_set() and not getattr(self.hotkey, 'announced', False):
                 self.hotkey.announced = True
-                self.status.set(f'{self.key.get()} готова. Снимки: {self.args.album}. Окно можно свернуть.')
+                self.status.set(f'{self.key.get()} готова. Снимки сохраняются в: {self.args.album}. Окно можно свернуть.')
             while not self.hotkey.errors.empty():
                 self.status.set(self.hotkey.errors.get_nowait())
         if self.worker:
             while not self.worker.events.empty():
                 kind, value = self.worker.events.get_nowait()
-                self.status.set(f'Сохранён PNG: {value[:12]}…' if kind == 'saved' else value)
+                self.status.set(f'✓ Снимок сохранён ({value[:8]}…). Продолжайте играть.' if kind == 'saved' else value)
         self.root.after(100, self.poll)
 
     def stop(self):
