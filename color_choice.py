@@ -9,9 +9,10 @@ from tkinter import ttk
 
 
 class ColorChoice(ttk.Frame):
-    def __init__(self, parent, textvariable, color, width=20):
+    def __init__(self, parent, textvariable, color, width=20, on_select=None):
         super().__init__(parent)
         self.variable, self.color = textvariable, color
+        self.on_select = on_select
         self.values = []
         self.popup = None
         self.button = tk.Button(self, textvariable=textvariable, width=width, anchor='w',
@@ -106,6 +107,8 @@ class ColorChoice(ttk.Frame):
             selected = self.box.curselection()
             if selected:
                 self.variable.set(self.values[selected[0]])
+                if self.on_select:
+                    self.on_select()
             self.close()
             self.focus_set()
         # Selecting with Enter must NOT also save/advance the editor.

@@ -121,16 +121,19 @@ class TemplateBank:
 
     def reload(self):
         samples = []
+        self.sample_paths = {}
         for kind in ('card', 'glyph', 'back', 'empty'):
             for path in sorted((self.root/kind).glob('*/*.png')):
                 image = load_template(path)
                 if image is not None:
                     samples.append((kind, folder_label(path.parent.name), image))
+                    self.sample_paths[id(image)] = str(path)
         # Earlier collectors accidentally wrote '.' samples into glyph/ itself.
         for path in sorted((self.root/'glyph').glob('*.png')):
             image = load_template(path)
             if image is not None:
                 samples.append(('glyph', '.', image))
+                self.sample_paths[id(image)] = str(path)
         self.samples = samples
 
     def candidates(self, kind):
@@ -143,43 +146,51 @@ class Recognizer:
         self.threshold = config.get('confidence', .84)
         self.margin = config.get('margin', .04)
 
-    def symbol(self, roi, kinds):
-        # Normalize height to reduce sensitivity to window scaling, while
-        # retaining aspect ratio. Templates must contain the same semantic ROI.
-        target_h = 110
-        image = cv2.resize(roi, (max(2, round(roi.shape[1]*target_h/roi.shape[0])), target_h))
-        binary = preprocess(image)
+    def rank_symbols(self, roi, kinds):
+        """One ranked result per semantic label, with the matching sample path.
+
+        Normalize query and template identically BEFORE preprocessing. Previously
+        the query used height 110 and templates 100, which depressed even near-
+        identical matches and made the editor's .94 threshold hard to reach.
+        """
+        if roi is None or not roi.size:
+            return []
+        height = 100
+        image = cv2.resize(roi, (max(2, round(roi.shape[1]*height/roi.shape[0])), height))
+        binary = cv2.copyMakeBorder(preprocess(image), 8, 8, 8, 8, cv2.BORDER_REPLICATE)
+        padded = cv2.copyMakeBorder(image, 8, 8, 8, 8, cv2.BORDER_REPLICATE)
         scores = {}
         for kind in kinds:
             for label, raw in self.bank.candidates(kind):
-                template = cv2.resize(raw, (max(2, round(raw.shape[1]*100/raw.shape[0])), 100))
+                template = cv2.resize(raw, (max(2, round(raw.shape[1]*height/raw.shape[0])), height))
                 score, (x, y, w, h) = match_score(binary, preprocess(template))
                 if kind == 'empty':
-                    # Blank regions need appearance comparison: normalized
-                    # correlation is undefined for constant templates.
                     aligned = cv2.resize(raw, (image.shape[1], image.shape[0]))
                     aspect = (raw.shape[1]/raw.shape[0])/(roi.shape[1]/roi.shape[0])
                     diff = cv2.absdiff(image, aligned)
                     appearance = 1-float(np.mean(diff))/255
                     changed = float(np.mean(np.max(diff, axis=2) > 35))
-                    # A white card with a previously unseen rank must not be
-                    # confused with an empty white slot just because most of
-                    # its background matches. Empty is intentionally strict.
                     score = appearance if (.8 <= aspect <= 1.25 and appearance >= .97 and changed <= .015) else -1
-                if kind in ('card', 'back') and score > 0:
-                    patch = image[y:y+h, x:x+w]
-                    color_distance = np.abs(color_profile(patch)-color_profile(template)).sum()/2
-                    score -= .20*color_distance
+                elif score > 0:
+                    patch = padded[y:y+h, x:x+w]
+                    score -= .20*float(np.abs(color_profile(patch)-color_profile(template)).sum()/2)
                 key = (kind, label)
-                scores[key] = max(score, scores.get(key, -1))
-        ranked = sorted(scores.items(), key=lambda p: p[1], reverse=True)
+                candidate = dict(kind=kind, label=label, score=float(max(-1, min(1, score))),
+                                 path=getattr(self.bank, 'sample_paths', {}).get(id(raw)))
+                if key not in scores or score > scores[key]['score']:
+                    scores[key] = candidate
+        return sorted(scores.values(), key=lambda item: item['score'], reverse=True)
+
+    def symbol(self, roi, kinds):
+        ranked = self.rank_symbols(roi, kinds)
         if not ranked:
             return Reading()
-        (kind, label), best = ranked[0]
-        runner = ranked[1][1] if len(ranked) > 1 else -1
-        if best < self.threshold or best-runner < self.margin:
-            return Reading(confidence=max(0, best))
-        return Reading(None if kind == 'empty' else label, best, 'empty' if kind == 'empty' else 'known')
+        best = ranked[0]
+        runner = ranked[1]['score'] if len(ranked) > 1 else -1
+        if best['score'] < self.threshold or best['score']-runner < self.margin:
+            return Reading(confidence=max(0, best['score']))
+        empty = best['kind'] == 'empty'
+        return Reading(None if empty else best['label'], best['score'], 'empty' if empty else 'known')
 
     def number(self, roi):
         if self.config.get('number_method') == 'segmented':
