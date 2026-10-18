@@ -13,14 +13,14 @@ class Launcher:
     def __init__(self):
         self.root = tk.Tk()
         self.root.title('Pokerist — настройка и запуск')
-        self.root.geometry('720x680')
+        self.root.geometry('760x760')
         self.root.minsize(650, 620)
         self.root.protocol('WM_DELETE_WINDOW', self.close)
         self.child = None
         self.log = None
         self.log_path = None
         self.buttons = []
-        self.title = tk.StringVar()
+        self.title = tk.StringVar(value='Texas Poker')
         self.status = tk.StringVar()
         self.instructions = tk.StringVar(value='Откройте стол в игре. Для первой настройки нажмите «1. Разметить стол».')
         ttk.Label(self.root, text='Pokerist • помощник настройки', font=('Arial', 18, 'bold')).pack(pady=15)
@@ -28,6 +28,8 @@ class Launcher:
         ttk.Label(self.root, text='Windows: уникальная часть заголовка окна игры (необязательно).\nЕсли заполнить, клиентская область будет выбрана автоматически.', justify='left').pack(anchor='w', padx=20, pady=(12, 2))
         ttk.Entry(self.root, textvariable=self.title).pack(fill='x', padx=20)
         modes = [
+            ('record', 'Сбор снимков во время игры — F8'),
+            ('label', 'Редактор накопленных снимков — выбрать карты из списка'),
             ('profile', '★ Профиль по вашим скриншотам — выбрать только область игры'),
             ('calibrate', '1. Разметить стол / исправить зоны'),
             ('collect', '2. Собрать шаблоны карт и цифр'),
@@ -68,7 +70,7 @@ class Launcher:
             env = dict(os.environ, PYTHONIOENCODING='utf-8')
             self.child = subprocess.Popen(launcher_command(sys.executable, mode, self.title.get()),
                                           cwd=ROOT, stdout=self.log, stderr=subprocess.STDOUT, env=env)
-            self.instructions.set('Закройте открытое окно помощника, чтобы вернуться к панели. Ошибки записываются в logs/.')
+            self.instructions.set('Закройте открытое окно помощника, чтобы вернуться к панели. Снимки хранятся в captures/inbox/, ошибки — logs/.')
             for button in self.buttons:
                 button.config(state='disabled')
             self.root.iconify()

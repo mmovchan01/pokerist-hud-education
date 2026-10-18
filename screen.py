@@ -59,42 +59,8 @@ def window_rect(title):
     import sys
     if sys.platform != 'win32' or not title:
         return None
-    import ctypes
-    import os
-    from ctypes import wintypes
-    user = ctypes.windll.user32
-    matches = []
-    callback = ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)
-
-    @callback
-    def visit(hwnd, _):
-        process = wintypes.DWORD()
-        user.GetWindowThreadProcessId(hwnd, ctypes.byref(process))
-        if process.value == os.getpid():
-            return True
-        if user.IsWindowVisible(hwnd) and not user.IsIconic(hwnd):
-            length = user.GetWindowTextLengthW(hwnd)
-            buf = ctypes.create_unicode_buffer(length+1)
-            user.GetWindowTextW(hwnd, buf, length+1)
-            if title.casefold() in buf.value.casefold():
-                matches.append(hwnd)
-        return True
-
-    user.EnumWindows.argtypes = [callback, wintypes.LPARAM]
-    user.GetWindowThreadProcessId.argtypes = [wintypes.HWND, ctypes.POINTER(wintypes.DWORD)]
-    user.IsWindowVisible.argtypes = [wintypes.HWND]
-    user.IsIconic.argtypes = [wintypes.HWND]
-    user.GetWindowTextLengthW.argtypes = [wintypes.HWND]
-    user.GetWindowTextW.argtypes = [wintypes.HWND, wintypes.LPWSTR, ctypes.c_int]
-    user.GetClientRect.argtypes = [wintypes.HWND, ctypes.POINTER(wintypes.RECT)]
-    user.ClientToScreen.argtypes = [wintypes.HWND, ctypes.POINTER(wintypes.POINT)]
-    user.EnumWindows(visit, 0)
-    if len(matches) != 1:
-        raise RuntimeError(f'Название окна «{title}»: найдено окон {len(matches)}, требуется одно')
-    rect, point = wintypes.RECT(), wintypes.POINT(0, 0)
-    user.GetClientRect(matches[0], ctypes.byref(rect))
-    user.ClientToScreen(matches[0], ctypes.byref(point))
-    return dict(left=point.x, top=point.y, width=rect.right, height=rect.bottom)
+    from windows_capture import find_window
+    return find_window(title)[2]
 
 
 def enable_dpi():
@@ -108,6 +74,10 @@ def enable_dpi():
 
 
 def grab(sct, config):
+    import sys
+    if sys.platform == 'win32' and config.get('window_title'):
+        from windows_capture import capture_window
+        return capture_window(config['window_title'])[0]
     region = window_rect(config.get('window_title')) or config['capture']
     if region['width'] < 20 or region['height'] < 20:
         raise RuntimeError('Окно свёрнуто или имеет нулевой размер')

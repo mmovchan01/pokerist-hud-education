@@ -12,6 +12,15 @@ from screen import Rect, preprocess
 from template_labels import folder_label
 
 
+def load_template(path):
+    """OpenCV fopen is not Unicode-safe on every Windows build."""
+    try:
+        data = np.frombuffer(Path(path).read_bytes(), np.uint8)
+        return cv2.imdecode(data, cv2.IMREAD_COLOR) if data.size else None
+    except (OSError, cv2.error):
+        return None
+
+
 def parse_amount(text):
     """Poker UI notation: 1,5K / 1.5K, 1,234 / 1.234, 1,234.50.
 
@@ -114,12 +123,12 @@ class TemplateBank:
         samples = []
         for kind in ('card', 'glyph', 'back', 'empty'):
             for path in sorted((self.root/kind).glob('*/*.png')):
-                image = cv2.imread(str(path))
+                image = load_template(path)
                 if image is not None:
                     samples.append((kind, folder_label(path.parent.name), image))
         # Earlier collectors accidentally wrote '.' samples into glyph/ itself.
         for path in sorted((self.root/'glyph').glob('*.png')):
-            image = cv2.imread(str(path))
+            image = load_template(path)
             if image is not None:
                 samples.append(('glyph', '.', image))
         self.samples = samples

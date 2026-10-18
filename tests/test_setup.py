@@ -83,7 +83,7 @@ def test_diagnostic_report(tmp_path):
 
 
 @pytest.mark.parametrize('args', [ ['--delay', '-1'], ['--delay', '31'],
-                                   ['--run', '--window-title', 'Pokerist'],
+                                   ['--label', '--window-title', 'Pokerist'],
                                    ['--iterations', '100'], ['--check', '--run'] ])
 def test_cli_validation_without_tk(args):
     result = subprocess.run([sys.executable, str(ROOT/'main.py'), *args], capture_output=True, text=True)
@@ -130,3 +130,11 @@ def test_preview_fits_small_desktop():
     assert 1920*scale <= 1286
     assert 1080*scale <= 528
     assert preview_scale(600, 400, 1920, 1080) == 1
+
+
+def test_launcher_record_label_and_target_window():
+    assert '--record' in launcher_command(sys.executable, 'record', 'Texas Poker')
+    assert launcher_command(sys.executable, 'record', 'Texas Poker')[-2:] == ['--window-title', 'Texas Poker']
+    assert '--label' in launcher_command(sys.executable, 'label')
+    assert '--delay' not in launcher_command(sys.executable, 'record')
+    assert launcher_command(sys.executable, 'run', 'Texas Poker')[-2:] == ['--window-title', 'Texas Poker']

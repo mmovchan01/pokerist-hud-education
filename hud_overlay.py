@@ -111,7 +111,8 @@ class HUD:
         self.args = args
         self.root = tk.Tk()
         self.root.title('Pokerist • учебный HUD')
-        self.root.attributes('-topmost', True)
+        self.pinned = tk.BooleanVar(value=True)
+        self.root.attributes('-topmost', self.pinned.get())
         self.root.attributes('-alpha', .93)
         self.root.geometry('660x780+30+30')
         self.root.minsize(580, 500)
@@ -128,6 +129,9 @@ class HUD:
         self.current = None
         self.last_live = None
         self.closed = False
+        self.album_worker = self.album_hotkey = None
+        self.record_enabled = tk.BooleanVar(value=False)
+        self.record_status = tk.StringVar(value='F8 выключена; снимки можно разбирать после сессии.')
         self.teaching = tk.BooleanVar(value=True)
         self.hide_answer = tk.BooleanVar(value=False)
         self.status = tk.StringVar(value='Загрузка…')
@@ -138,6 +142,9 @@ class HUD:
         if not args.demo:
             try:
                 self.config = load_config(args.config)
+                import sys
+                if sys.platform == 'win32':
+                    self.config['window_title'] = args.window_title or self.config.get('window_title') or 'Texas Poker'
                 self.pipeline = Pipeline(self.config, args.templates, self.coach)
                 self.pipeline.start()
                 # Place beside the calibrated client, not on the captured table.
@@ -165,19 +172,57 @@ class HUD:
         ttk.Button(bar, text='Авто', command=self.auto).pack(side='left', padx=5)
         ttk.Checkbutton(bar, text='Обучение', variable=self.teaching, command=self.redraw).pack(side='right')
         ttk.Checkbutton(self.root, text='Тренировка: скрыть расчёт (снимите галочку для ответа)', variable=self.hide_answer, command=self.redraw).pack(anchor='w', padx=12, pady=5)
+        ttk.Checkbutton(self.root, text='Закрепить HUD поверх всех окон', variable=self.pinned,
+                        command=lambda: self.root.attributes('-topmost', self.pinned.get())).pack(anchor='w', padx=12)
+        recorder = ttk.Frame(self.root)
+        recorder.pack(fill='x', padx=12)
+        ttk.Checkbutton(recorder, text='F8: копить снимки Texas Poker', variable=self.record_enabled, command=self.toggle_recording).pack(side='left')
+        ttk.Button(recorder, text='Снимок в очередь', command=self.record_snapshot).pack(side='right')
+        tk.Label(self.root, textvariable=self.record_status, bg='#12202d', fg='#a5bfcc', wraplength=620).pack(fill='x', padx=12)
         self.cards = tk.Frame(self.root, bg='#12202d', height=70)
         self.cards.pack(fill='x', padx=12, pady=12)
         tk.Label(self.root, textvariable=self.metrics, justify='left', anchor='w', bg='#12202d', fg='white', font=('Arial', 13), wraplength=620).pack(fill='x', padx=12)
         tk.Label(self.root, textvariable=self.confidence, bg='#12202d', fg='#a5bfcc', wraplength=620, justify='left').pack(fill='x', padx=12, pady=6)
         self.details = tk.Text(self.root, wrap='word', height=18, bg='#1b3041', fg='#e9f4f7', font=('Arial', 11), relief='flat', padx=12, pady=12)
-        self.details.pack(fill='both', expand=True, padx=10)
         self.details.config(state='disabled')
         controls = ttk.Frame(self.root)
-        controls.pack(fill='x', padx=10, pady=8)
+        controls.pack(side='bottom', fill='x', padx=10, pady=8)
         ttk.Button(controls, text='Тестовая раздача', command=self.demo).pack(side='left')
         ttk.Button(controls, text='Вернуться к столу', command=self.live).pack(side='left', padx=4)
         ttk.Button(controls, text='Скриншот в базу шаблонов', command=self.collect).pack(side='left')
-        tk.Label(self.root, textvariable=self.status, bg='#12202d', fg='#ffc979', justify='left', wraplength=630).pack(fill='x', padx=10, pady=5)
+        tk.Label(self.root, textvariable=self.status, bg='#12202d', fg='#ffc979', justify='left', wraplength=630).pack(side='bottom', fill='x', padx=10, pady=5)
+        self.details.pack(fill='both', expand=True, padx=10)
+
+    def toggle_recording(self):
+        if self.record_enabled.get():
+            from capture_worker import CaptureWorker
+            from global_hotkey import ScreenshotHotkey
+            from screenshot_album import Album
+            try:
+                self.album_worker = CaptureWorker(Album(self.args.album, self.args.templates), self.args.config, 'Texas Poker')
+                self.album_hotkey = ScreenshotHotkey(self.album_worker.request)
+                self.album_hotkey.start()
+                self.record_status.set('Регистрация F8…')
+            except (OSError, RuntimeError) as exc:
+                if self.album_worker:
+                    self.album_worker.close()
+                self.album_worker = self.album_hotkey = None
+                self.record_enabled.set(False)
+                self.record_status.set(f'Не удалось включить сбор: {exc}')
+        else:
+            if self.album_hotkey:
+                self.album_hotkey.close()
+            if self.album_worker:
+                self.album_worker.close()
+            self.album_worker = self.album_hotkey = None
+            self.record_status.set('F8 выключена; снимки остаются в альбоме.')
+
+    def record_snapshot(self):
+        if not self.record_enabled.get():
+            self.record_enabled.set(True)
+            self.toggle_recording()
+        if self.album_worker:
+            self.album_worker.request()
 
     def adjust(self, delta):
         base = self.override if self.override is not None else (self.current[0].opponents if self.current else 1)
@@ -305,6 +350,16 @@ class HUD:
     def poll(self):
         if self.closed:
             return
+        if self.album_hotkey:
+            if self.album_hotkey.ready.is_set() and not getattr(self.album_hotkey, 'announced', False):
+                self.album_hotkey.announced = True
+                self.record_status.set('F8 готова — снимки Texas Poker сохраняются в альбом.')
+            while not self.album_hotkey.errors.empty():
+                self.record_status.set(self.album_hotkey.errors.get_nowait())
+        if self.album_worker:
+            while not self.album_worker.events.empty():
+                kind, value = self.album_worker.events.get_nowait()
+                self.record_status.set('Снимок в альбоме: '+value[:12] if kind == 'saved' else value)
         if self.pipeline:
             while True:
                 try:
@@ -366,6 +421,8 @@ class HUD:
 
     def close(self):
         self.closed = True
+        self.record_enabled.set(False)
+        self.toggle_recording()
         if self.pipeline:
             self.pipeline.close()
         self.safe_log(self.logger.end)
