@@ -13,6 +13,7 @@ class ScreenshotHotkey:
         self.ready = threading.Event()
         self.stopping = threading.Event()
         self.thread_id = None
+        self.registered = False
         self.thread = threading.Thread(target=self._run, name='screenshot-hotkey', daemon=True)
 
     def start(self):
@@ -37,6 +38,7 @@ class ScreenshotHotkey:
             if not user.RegisterHotKey(None, 1, 0x4000, virtual_key):  # MOD_NOREPEAT
                 raise RuntimeError(f'{self.key} уже занята. Выберите другую клавишу или используйте кнопку.')
             registered = True
+            self.registered = True
             self.ready.set()
             message = wt.MSG()
             while not self.stopping.is_set():
@@ -50,6 +52,7 @@ class ScreenshotHotkey:
         except Exception as exc:
             self.errors.put(str(exc))
         finally:
+            self.registered = False
             self.ready.set()
             if registered:
                 user.UnregisterHotKey(None, 1)
