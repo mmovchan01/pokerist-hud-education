@@ -24,12 +24,12 @@ def preview_scale(width, height, screen_width, screen_height):
 
 
 def launcher_command(python, mode, window_title=''):
-    modes = {'calibrate': '--calibrate', 'collect': '--collect',
+    modes = {'profile': '--profile', 'calibrate': '--calibrate', 'collect': '--collect',
              'check': '--check', 'run': '--run', 'demo': '--demo'}
     if mode not in modes:
         raise ValueError('Unknown launch mode')
     command = [str(python), str(ROOT/'main.py'), modes[mode]]
-    if mode in ('calibrate', 'collect', 'check'):
+    if mode in ('profile', 'calibrate', 'collect', 'check'):
         command.extend(['--delay', '4'])
     if mode == 'calibrate' and window_title.strip():
         command.extend(['--window-title', window_title.strip()])

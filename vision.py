@@ -9,6 +9,7 @@ import cv2
 import numpy as np
 
 from screen import Rect, preprocess
+from template_labels import folder_label
 
 
 def parse_amount(text):
@@ -115,7 +116,12 @@ class TemplateBank:
             for path in sorted((self.root/kind).glob('*/*.png')):
                 image = cv2.imread(str(path))
                 if image is not None:
-                    samples.append((kind, path.parent.name, image))
+                    samples.append((kind, folder_label(path.parent.name), image))
+        # Earlier collectors accidentally wrote '.' samples into glyph/ itself.
+        for path in sorted((self.root/'glyph').glob('*.png')):
+            image = cv2.imread(str(path))
+            if image is not None:
+                samples.append(('glyph', '.', image))
         self.samples = samples
 
     def candidates(self, kind):
@@ -167,6 +173,15 @@ class Recognizer:
         return Reading(None if kind == 'empty' else label, best, 'empty' if kind == 'empty' else 'known')
 
     def number(self, roi):
+        if self.config.get('number_method') == 'segmented':
+            from numeric_vision import recognize_number
+            text, confidence = recognize_number(roi, self.bank.candidates('glyph'))
+            if text is None:
+                return Reading(confidence=confidence)
+            try:
+                return Reading(parse_amount(text), confidence, 'known')
+            except ValueError:
+                return Reading(confidence=confidence)
         # All glyph templates are normalized to a common character height;
         # labels with alternative samples compete in global X-axis NMS.
         normalized = cv2.resize(roi, (max(2, round(roi.shape[1]*40/roi.shape[0])), 40))

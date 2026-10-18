@@ -1,0 +1,395 @@
+{
+  "warning": "Training/reference screenshots, not held-out accuracy evaluation. Single frames do not test temporal stabilization. No active-opponent labels inferred from animation.",
+  "frames": [
+    {
+      "source_frame": 1,
+      "readings": {
+        "hero1": {
+          "ground_truth": null,
+          "value": null,
+          "status": "empty",
+          "score": 1.0
+        },
+        "hero2": {
+          "ground_truth": null,
+          "value": null,
+          "status": "empty",
+          "score": 1.0
+        },
+        "board1": {
+          "ground_truth": null,
+          "value": null,
+          "status": "empty",
+          "score": 1.0
+        },
+        "board2": {
+          "ground_truth": null,
+          "value": null,
+          "status": "empty",
+          "score": 1.0
+        },
+        "board3": {
+          "ground_truth": null,
+          "value": null,
+          "status": "empty",
+          "score": 1.0
+        },
+        "board4": {
+          "ground_truth": null,
+          "value": null,
+          "status": "empty",
+          "score": 1.0
+        },
+        "board5": {
+          "ground_truth": null,
+          "value": null,
+          "status": "empty",
+          "score": 1.0
+        },
+        "pot": {
+          "ground_truth": null,
+          "value": null,
+          "status": "unknown",
+          "score": 0.0
+        },
+        "stack": {
+          "ground_truth": 19962,
+          "value": 19962.0,
+          "status": "known",
+          "score": 0.9999997019767761
+        },
+        "call": {
+          "ground_truth": null,
+          "value": null,
+          "status": "unknown",
+          "score": 0.0
+        }
+      }
+    },
+    {
+      "source_frame": 2,
+      "readings": {
+        "hero1": {
+          "ground_truth": "5d",
+          "value": "5d",
+          "status": "known",
+          "score": 0.8989252994760737
+        },
+        "hero2": {
+          "ground_truth": "Ad",
+          "value": "Ad",
+          "status": "known",
+          "score": 0.9436645247902004
+        },
+        "board1": {
+          "ground_truth": null,
+          "value": null,
+          "status": "empty",
+          "score": 1.0
+        },
+        "board2": {
+          "ground_truth": null,
+          "value": null,
+          "status": "empty",
+          "score": 1.0
+        },
+        "board3": {
+          "ground_truth": null,
+          "value": null,
+          "status": "empty",
+          "score": 1.0
+        },
+        "board4": {
+          "ground_truth": null,
+          "value": null,
+          "status": "empty",
+          "score": 1.0
+        },
+        "board5": {
+          "ground_truth": null,
+          "value": null,
+          "status": "empty",
+          "score": 1.0
+        },
+        "pot": {
+          "ground_truth": null,
+          "value": null,
+          "status": "unknown",
+          "score": 0.0
+        },
+        "stack": {
+          "ground_truth": 19950,
+          "value": 19950.0,
+          "status": "known",
+          "score": 0.9999997019767761
+        },
+        "call": {
+          "ground_truth": 1300,
+          "value": null,
+          "status": "unknown",
+          "score": 0.4781317412853241
+        }
+      }
+    },
+    {
+      "source_frame": 3,
+      "readings": {
+        "hero1": {
+          "ground_truth": "Qc",
+          "value": "Qc",
+          "status": "known",
+          "score": 0.8744524566419615
+        },
+        "hero2": {
+          "ground_truth": "2d",
+          "value": "2d",
+          "status": "known",
+          "score": 0.9199448640328045
+        },
+        "board1": {
+          "ground_truth": "4c",
+          "value": "4c",
+          "status": "known",
+          "score": 0.9050319895984793
+        },
+        "board2": {
+          "ground_truth": "Qd",
+          "value": "Qd",
+          "status": "known",
+          "score": 0.9457138529745189
+        },
+        "board3": {
+          "ground_truth": "Ts",
+          "value": "Ts",
+          "status": "known",
+          "score": 0.8773910031873082
+        },
+        "board4": {
+          "ground_truth": null,
+          "value": null,
+          "status": "empty",
+          "score": 1.0
+        },
+        "board5": {
+          "ground_truth": null,
+          "value": null,
+          "status": "empty",
+          "score": 1.0
+        },
+        "pot": {
+          "ground_truth": 12600,
+          "value": 12600.0,
+          "status": "known",
+          "score": 0.9999997615814209
+        },
+        "stack": {
+          "ground_truth": 19900,
+          "value": 19900.0,
+          "status": "known",
+          "score": 0.9999998211860657
+        },
+        "call": {
+          "ground_truth": null,
+          "value": null,
+          "status": "unknown",
+          "score": 0.0
+        }
+      }
+    },
+    {
+      "source_frame": 4,
+      "readings": {
+        "hero1": {
+          "ground_truth": "Ks",
+          "value": "Ks",
+          "status": "known",
+          "score": 0.9055014244971149
+        },
+        "hero2": {
+          "ground_truth": "8d",
+          "value": "8d",
+          "status": "known",
+          "score": 0.942627924823361
+        },
+        "board1": {
+          "ground_truth": null,
+          "value": null,
+          "status": "empty",
+          "score": 1.0
+        },
+        "board2": {
+          "ground_truth": null,
+          "value": null,
+          "status": "empty",
+          "score": 1.0
+        },
+        "board3": {
+          "ground_truth": null,
+          "value": null,
+          "status": "empty",
+          "score": 1.0
+        },
+        "board4": {
+          "ground_truth": null,
+          "value": null,
+          "status": "empty",
+          "score": 1.0
+        },
+        "board5": {
+          "ground_truth": null,
+          "value": null,
+          "status": "empty",
+          "score": 1.0
+        },
+        "pot": {
+          "ground_truth": null,
+          "value": null,
+          "status": "unknown",
+          "score": 0.0
+        },
+        "stack": {
+          "ground_truth": 19850,
+          "value": 19850.0,
+          "status": "known",
+          "score": 0.9999997019767761
+        },
+        "call": {
+          "ground_truth": 1200,
+          "value": null,
+          "status": "unknown",
+          "score": 0.4781317412853241
+        }
+      }
+    },
+    {
+      "source_frame": 5,
+      "readings": {
+        "hero1": {
+          "ground_truth": "Ks",
+          "value": "Ks",
+          "status": "known",
+          "score": 0.9091816859138148
+        },
+        "hero2": {
+          "ground_truth": "8d",
+          "value": "8d",
+          "status": "known",
+          "score": 0.9426020514475427
+        },
+        "board1": {
+          "ground_truth": "6c",
+          "value": "6c",
+          "status": "known",
+          "score": 0.909089138812212
+        },
+        "board2": {
+          "ground_truth": "Qs",
+          "value": "Qs",
+          "status": "known",
+          "score": 0.8990248854109018
+        },
+        "board3": {
+          "ground_truth": "7s",
+          "value": "7s",
+          "status": "known",
+          "score": 0.8808281971604641
+        },
+        "board4": {
+          "ground_truth": null,
+          "value": null,
+          "status": "empty",
+          "score": 1.0
+        },
+        "board5": {
+          "ground_truth": null,
+          "value": null,
+          "status": "empty",
+          "score": 1.0
+        },
+        "pot": {
+          "ground_truth": 2500,
+          "value": null,
+          "status": "unknown",
+          "score": 0.3747340440750122
+        },
+        "stack": {
+          "ground_truth": 18650,
+          "value": 18650.0,
+          "status": "known",
+          "score": 0.9999997019767761
+        },
+        "call": {
+          "ground_truth": null,
+          "value": null,
+          "status": "unknown",
+          "score": 0.0
+        }
+      }
+    },
+    {
+      "source_frame": 6,
+      "readings": {
+        "hero1": {
+          "ground_truth": "Ks",
+          "value": "Ks",
+          "status": "known",
+          "score": 0.9159211187221704
+        },
+        "hero2": {
+          "ground_truth": "8d",
+          "value": "8d",
+          "status": "known",
+          "score": 0.9411398193836251
+        },
+        "board1": {
+          "ground_truth": "6c",
+          "value": "6c",
+          "status": "known",
+          "score": 0.9114236739341297
+        },
+        "board2": {
+          "ground_truth": "Qs",
+          "value": "Qs",
+          "status": "known",
+          "score": 0.8989189343880659
+        },
+        "board3": {
+          "ground_truth": "7s",
+          "value": "7s",
+          "status": "known",
+          "score": 0.8810971342074643
+        },
+        "board4": {
+          "ground_truth": "5h",
+          "value": "5h",
+          "status": "known",
+          "score": 0.907690154679403
+        },
+        "board5": {
+          "ground_truth": null,
+          "value": null,
+          "status": "empty",
+          "score": 1.0
+        },
+        "pot": {
+          "ground_truth": 11900,
+          "value": 11900.0,
+          "status": "known",
+          "score": 0.9999998211860657
+        },
+        "stack": {
+          "ground_truth": 13950,
+          "value": 13950.0,
+          "status": "known",
+          "score": 0.9999997019767761
+        },
+        "call": {
+          "ground_truth": 5500,
+          "value": 5500.0,
+          "status": "known",
+          "score": 0.9999998211860657
+        }
+      }
+    }
+  ]
+}

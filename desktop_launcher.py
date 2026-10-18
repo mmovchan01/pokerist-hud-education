@@ -13,8 +13,8 @@ class Launcher:
     def __init__(self):
         self.root = tk.Tk()
         self.root.title('Pokerist — настройка и запуск')
-        self.root.geometry('720x620')
-        self.root.minsize(650, 560)
+        self.root.geometry('720x680')
+        self.root.minsize(650, 620)
         self.root.protocol('WM_DELETE_WINDOW', self.close)
         self.child = None
         self.log = None
@@ -28,6 +28,7 @@ class Launcher:
         ttk.Label(self.root, text='Windows: уникальная часть заголовка окна игры (необязательно).\nЕсли заполнить, клиентская область будет выбрана автоматически.', justify='left').pack(anchor='w', padx=20, pady=(12, 2))
         ttk.Entry(self.root, textvariable=self.title).pack(fill='x', padx=20)
         modes = [
+            ('profile', '★ Профиль по вашим скриншотам — выбрать только область игры'),
             ('calibrate', '1. Разметить стол / исправить зоны'),
             ('collect', '2. Собрать шаблоны карт и цифр'),
             ('check', '3. Проверить один кадр'),
@@ -56,8 +57,8 @@ class Launcher:
         if mode in ('collect', 'check', 'run') and not (ROOT/'config.json').exists():
             messagebox.showinfo('Сначала разметка', 'Начните с кнопки «1. Разметить стол».', parent=self.root)
             return
-        if mode == 'calibrate' and (ROOT/'config.json').exists():
-            if not messagebox.askyesno('Редактирование зон', 'Загрузить текущую разметку для исправления?\nПри сохранении создаётся резервная копия config.json.bak.', parent=self.root):
+        if mode in ('calibrate', 'profile') and (ROOT/'config.json').exists():
+            if not messagebox.askyesno('Редактирование зон', 'Открыть редактор? Профиль заменит зоны только после сохранения; обычная разметка загрузит текущие.\nПредыдущий config.json будет сохранён в config.json.bak.', parent=self.root):
                 return
         try:
             logs = ROOT/'logs'

@@ -13,6 +13,7 @@ from screen import Rect, enable_dpi, grab, load_config, window_rect
 from setup_support import selection_bounds, preview_scale
 from config_io import save_config
 from capture_ui import fresh_capture
+from template_labels import label_folder
 
 ROI_NAMES = ['hero1', 'hero2', *[f'board{i}' for i in range(1, 6)],
              'pot', 'stack', 'call', *[f'opp{i}' for i in range(1, 9)],
@@ -40,7 +41,7 @@ def save_template(root, kind, label, image):
              (kind == 'empty' and label == 'empty'))
     if not valid:
         raise ValueError('Карта: Ah, Td; цифра/символ: 0–9 . , K M B; рубашка: back; пустой слот: empty')
-    folder = Path(root) / kind / label
+    folder = Path(root) / kind / label_folder(label)
     folder.mkdir(parents=True, exist_ok=True)
     path = folder / f'{time.time_ns()}.png'
     if not image.size or not cv2.imwrite(str(path), image):
@@ -150,14 +151,17 @@ class Collector(tk.Toplevel):
 
 
 class CalibrationApp:
-    def __init__(self, config_path, template_dir, collect=False, window_title=''):
+    def __init__(self, config_path, template_dir, collect=False, window_title='', profile_path=None):
         enable_dpi()
+        from profile_support import load_profile
+        self.profile_path = profile_path
+        self.profile = load_profile(profile_path) if profile_path else None
         self.path, self.template_dir = Path(config_path), template_dir
         self.root = tk.Tk()
         self.root.title('Калибровка Pokerist')
         self.root.withdraw()
         self.window_title = window_title
-        self.base_config = {}
+        self.base_config = dict(self.profile) if self.profile else {}
         if collect:
             try:
                 config = load_config(self.path)
@@ -176,10 +180,10 @@ class CalibrationApp:
             self.desktop = np.asarray(sct.grab(self.monitor))[:, :, :3].copy()
         self.image = self.desktop
         self.capture = None
-        self.rois = {}
+        self.rois = self.profile['rois'].copy() if self.profile else {}
         self.stage = 'client'
         try:
-            if self.path.exists():
+            if self.path.exists() and not self.profile:
                 self.base_config = load_config(self.path)
                 self.rois = self.base_config['rois'].copy()
                 self.capture = self.base_config['capture'].copy()
@@ -219,7 +223,7 @@ class CalibrationApp:
 
     def update_hint(self):
         if self.stage == 'client':
-            self.status.set('1. Выделите клиентскую область игры. Для точного выбора окна в Windows задайте его заголовок в панели запуска.')
+            self.status.set('Профиль по вашим скриншотам: выделите ОДИН раз всё изображение игры (верхнее меню и нижние кнопки), без рамок браузера. После этого зоны уже будут расставлены.' if self.profile else '1. Выделите клиентскую область игры. Для точного выбора окна в Windows задайте его заголовок в панели запуска.')
         else:
             missing = set(ROI_NAMES[:10])-self.rois.keys()
             self.status.set(f'Зон: {len(self.rois)}, обязательных осталось: {len(missing)}. Сейчас {self.name.get()}: {roi_hint(self.name.get())}')
@@ -249,7 +253,7 @@ class CalibrationApp:
         def accept(image):
             self.desktop = self.image = image
             self.capture = None
-            self.rois = {}
+            self.rois = self.profile['rois'].copy() if self.profile else {}
             self.window_title = ''
             self.stage = 'client'
             self.name.set('hero1')
@@ -285,7 +289,7 @@ class CalibrationApp:
         self.canvas.config(width=self.photo.width(), height=self.photo.height())
         self.canvas.delete('all')
         self.canvas.create_image(0, 0, anchor='nw', image=self.photo)
-        for name, values in self.rois.items():
+        for name, values in (self.rois.items() if self.stage == 'rois' else []):
             x, y, w, h = Rect(*values).pixels(self.photo.width(), self.photo.height())
             self.canvas.create_rectangle(x, y, x+w, y+h, outline='#00ee88')
             self.canvas.create_text(x, y, text=name, anchor='nw', fill='#ff5500')
@@ -308,6 +312,13 @@ class CalibrationApp:
             return
         values = [x/self.photo.width(), y/self.photo.height(), w/self.photo.width(), h/self.photo.height()]
         if self.stage == 'client':
+            if self.profile:
+                from profile_support import check_aspect
+                try:
+                    check_aspect(w, h, self.profile['reference_size'])
+                except ValueError as exc:
+                    messagebox.showerror('Область игры', str(exc), parent=self.root)
+                    return
             px, py, pw, ph = Rect(*values).pixels(self.desktop.shape[1], self.desktop.shape[0])
             self.capture = dict(left=self.monitor['left']+px, top=self.monitor['top']+py, width=pw, height=ph)
             self.image = self.desktop[py:py+ph, px:px+pw].copy()
@@ -344,13 +355,16 @@ class CalibrationApp:
         data.setdefault('margin', .04)
         data.setdefault('interval', .275)
         try:
+            if self.profile:
+                from profile_support import seed_templates
+                seed_templates(self.template_dir, self.profile_path)
             save_config(self.path, data)
         except (ValueError, OSError) as exc:
             messagebox.showerror('Не удалось сохранить', str(exc), parent=self.root)
             return
         self.window_title = title
         self.base_config = data
-        self.status.set(f'Сохранено {self.path}. Теперь соберите шаблоны: карты, цифры, рубашка.')
+        self.status.set(f'Сохранено {self.path}. ' + ('Стартовые шаблоны установлены. Закройте редактор → проверьте кадр. Число оппонентов в HUD задайте вручную.' if self.profile else 'Теперь соберите шаблоны: карты, цифры, рубашка.'))
 
     def run(self):
         self.root.mainloop()
