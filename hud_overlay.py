@@ -256,7 +256,11 @@ class HUD:
             self.status.set('Нет кадра экрана. Запустите --collect после калибровки.')
             return
         from calibrator import Collector
-        dialog = Collector(self.root, frame, self.args.templates, self.config['rois'])
+        def capture():
+            import mss
+            with mss.mss() as sct:
+                return grab(sct, self.config)
+        dialog = Collector(self.root, frame, self.args.templates, self.config['rois'], capture=capture)
         def done():
             dialog.destroy()
             self.pipeline.reload.set()

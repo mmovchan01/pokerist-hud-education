@@ -1,5 +1,4 @@
 """Mouse-only ROI setup and fast, labelled training sample collection."""
-import json
 import re
 import time
 import tkinter as tk
@@ -11,10 +10,27 @@ import mss
 from PIL import Image, ImageTk
 
 from screen import Rect, enable_dpi, grab, load_config, window_rect
+from setup_support import selection_bounds, preview_scale
+from config_io import save_config
+from capture_ui import fresh_capture
 
 ROI_NAMES = ['hero1', 'hero2', *[f'board{i}' for i in range(1, 6)],
              'pot', 'stack', 'call', *[f'opp{i}' for i in range(1, 9)],
              *[f'oppstack{i}' for i in range(1, 9)]]
+
+
+def roi_hint(name):
+    if name.startswith('hero'):
+        return 'Ваша карта: выделите всю карту плотно, не захватывая соседнюю.'
+    if name.startswith('board'):
+        return 'Позиция карты борда: выделите слот даже если он сейчас пустой.'
+    if name.startswith('oppstack'):
+        return 'Необязательно: числовая строка стека соответствующего соперника.'
+    if name.startswith('opp'):
+        return 'Только рубашка карт соперника; аватар и имя не включайте. Неиспользуемое место пропустите.'
+    return {'pot': 'Банк: только число с суффиксом, без подписи и значка фишек.',
+            'stack': 'Ваш стек: только числовая строка.',
+            'call': 'Сумма колла: только число, без слова Call. Check не является шаблоном цифры 0.'}.get(name, '')
 
 
 def save_template(root, kind, label, image):
@@ -34,17 +50,20 @@ def save_template(root, kind, label, image):
 
 class Collector(tk.Toplevel):
     """Select any crop, type a label, press Enter. No filesystem editing."""
-    def __init__(self, parent, image, template_dir, rois=None):
+    def __init__(self, parent, image, template_dir, rois=None, capture=None):
         super().__init__(parent)
         self.title('Шаблоны: выделите карту целиком / один символ / рубашку')
         self.image, self.template_dir = image.copy(), template_dir
         self.rois = rois or {}
+        self.capture = capture
         self.kind = tk.StringVar(value='card')
         self.label = tk.StringVar()
         self.status = tk.StringVar(value='Пустые края карт обрезайте одинаково; цифры выделяйте по одному символу.')
         bar = ttk.Frame(self)
         bar.pack(fill='x')
-        ttk.Combobox(bar, textvariable=self.kind, values=['card', 'glyph', 'back', 'empty'], width=8, state='readonly').pack(side='left')
+        kind_picker = ttk.Combobox(bar, textvariable=self.kind, values=['card', 'glyph', 'back', 'empty'], width=8, state='readonly')
+        kind_picker.pack(side='left')
+        kind_picker.bind('<<ComboboxSelected>>', lambda e: self.suggest_label())
         self.roi_name = tk.StringVar()
         roi_picker = ttk.Combobox(bar, textvariable=self.roi_name, values=list(self.rois), width=12, state='readonly')
         roi_picker.pack(side='left')
@@ -52,8 +71,11 @@ class Collector(tk.Toplevel):
         self.entry = ttk.Entry(bar, textvariable=self.label, width=14)
         self.entry.pack(side='left')
         ttk.Button(bar, text='Сохранить (Enter)', command=self.save).pack(side='left')
-        ttk.Label(self, textvariable=self.status).pack()
-        self.scale = min(1, 1200/image.shape[1], 720/image.shape[0])
+        if capture:
+            ttk.Button(bar, text='Новый кадр (3 с)', command=self.refresh).pack(side='left')
+        ttk.Button(bar, text='Следующая зона', command=self.next_roi).pack(side='left')
+        ttk.Label(self, textvariable=self.status, wraplength=1050).pack()
+        self.scale = preview_scale(image.shape[1], image.shape[0], self.winfo_screenwidth(), self.winfo_screenheight())
         rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         self.photo = ImageTk.PhotoImage(Image.fromarray(rgb).resize((round(image.shape[1]*self.scale), round(image.shape[0]*self.scale))))
         self.canvas = tk.Canvas(self, width=self.photo.width(), height=self.photo.height())
@@ -64,6 +86,35 @@ class Collector(tk.Toplevel):
         self.canvas.bind('<ButtonRelease-1>', lambda e: self.entry.focus_set())
         self.bind('<Return>', lambda e: self.save())
         self.start = self.box = None
+        if self.rois:
+            self.roi_name.set(next(iter(self.rois)))
+            self.select_roi()
+
+    def suggest_label(self):
+        self.label.set({'empty': 'empty', 'back': 'back'}.get(self.kind.get(), ''))
+
+    def next_roi(self):
+        names = list(self.rois)
+        if names:
+            index = names.index(self.roi_name.get()) if self.roi_name.get() in names else -1
+            self.roi_name.set(names[(index+1) % len(names)])
+            self.select_roi()
+
+    def refresh(self):
+        if self.capture:
+            fresh_capture(self, self.capture, self.set_image)
+
+    def set_image(self, image):
+        self.image = image.copy()
+        self.scale = preview_scale(image.shape[1], image.shape[0], self.winfo_screenwidth(), self.winfo_screenheight())
+        rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        self.photo = ImageTk.PhotoImage(Image.fromarray(rgb).resize((round(image.shape[1]*self.scale), round(image.shape[0]*self.scale))))
+        self.canvas.config(width=self.photo.width(), height=self.photo.height())
+        self.canvas.delete('all')
+        self.canvas.create_image(0, 0, anchor='nw', image=self.photo)
+        self.start = self.box = None
+        self.select_roi()
+        self.status.set('Новый кадр получен. Выберите зону и подпишите образец.')
 
     def select_roi(self):
         values = self.rois.get(self.roi_name.get())
@@ -71,6 +122,10 @@ class Collector(tk.Toplevel):
             x, y, w, h = Rect(*values).pixels(self.photo.width(), self.photo.height())
             self.canvas.delete('selection')
             self.box = self.canvas.create_rectangle(x, y, x+w, y+h, outline='#00ff88', width=2, tags='selection')
+            name = self.roi_name.get()
+            self.kind.set('glyph' if name in ('pot', 'stack', 'call') or name.startswith('oppstack') else ('back' if name.startswith('opp') else 'card'))
+            self.suggest_label()
+            self.status.set(roi_hint(name) + ' Для цифр сузьте выделение до одного символа, сохранив высоту строки.')
             self.entry.focus_set()
 
     def down(self, event):
@@ -85,30 +140,30 @@ class Collector(tk.Toplevel):
     def save(self):
         if self.box is None:
             return
-        x1, y1, x2, y2 = self.canvas.coords(self.box)
-        x1, x2 = sorted((max(0, round(x1/self.scale)), min(self.image.shape[1], round(x2/self.scale))))
-        y1, y2 = sorted((max(0, round(y1/self.scale)), min(self.image.shape[0], round(y2/self.scale))))
+        x1, y1, x2, y2 = selection_bounds(self.canvas.coords(self.box), self.scale, self.image.shape[1], self.image.shape[0])
         try:
             path = save_template(self.template_dir, self.kind.get(), self.label.get().strip(), self.image[y1:y2, x1:x2])
             self.status.set(f'Сохранено: {path.name}. Следующий образец → выделение → метка → Enter')
-            self.label.set('')
+            self.suggest_label()
         except ValueError as exc:
             messagebox.showerror('Шаблон', str(exc), parent=self)
 
 
 class CalibrationApp:
-    def __init__(self, config_path, template_dir, collect=False):
+    def __init__(self, config_path, template_dir, collect=False, window_title=''):
         enable_dpi()
         self.path, self.template_dir = Path(config_path), template_dir
         self.root = tk.Tk()
         self.root.title('Калибровка Pokerist')
         self.root.withdraw()
+        self.window_title = window_title
+        self.base_config = {}
         if collect:
             try:
                 config = load_config(self.path)
                 with mss.mss() as sct:
                     image = grab(sct, config)
-                dialog = Collector(self.root, image, template_dir, config['rois'])
+                dialog = Collector(self.root, image, template_dir, config['rois'], capture=lambda: self.capture_config(config))
                 dialog.protocol('WM_DELETE_WINDOW', self.root.destroy)
             except Exception:
                 self.root.destroy()
@@ -119,20 +174,39 @@ class CalibrationApp:
             self.monitor = dict(sct.monitors[0])
             import numpy as np
             self.desktop = np.asarray(sct.grab(self.monitor))[:, :, :3].copy()
-        self.root.deiconify()
         self.image = self.desktop
         self.capture = None
         self.rois = {}
         self.stage = 'client'
+        try:
+            if self.path.exists():
+                self.base_config = load_config(self.path)
+                self.rois = self.base_config['rois'].copy()
+                self.capture = self.base_config['capture'].copy()
+                self.window_title = window_title or self.base_config.get('window_title', '')
+            actual = window_rect(self.window_title)
+            if actual:
+                self.capture = actual
+            if self.capture:
+                config = dict(capture=self.capture, window_title=self.window_title)
+                self.image = self.capture_config(config)
+                self.stage = 'rois'
+        except Exception as exc:
+            messagebox.showerror('Окно / конфигурация', str(exc), parent=self.root)
+            self.root.destroy()
+            raise
         self.status = tk.StringVar(value='1. Выделите клиентскую область игры (без рамок и HUD).')
         ttk.Label(self.root, textvariable=self.status, wraplength=1100).pack()
         toolbar = ttk.Frame(self.root)
         toolbar.pack(fill='x')
         self.name = tk.StringVar(value='hero1')
         ttk.Combobox(toolbar, textvariable=self.name, values=ROI_NAMES, state='readonly').pack(side='left')
+        self.name.trace_add('write', lambda *args: self.update_hint())
+        ttk.Button(toolbar, text='Новый кадр (3 с)', command=self.refresh).pack(side='left')
+        ttk.Button(toolbar, text='Выбрать область заново', command=self.reselect_client).pack(side='left')
         ttk.Button(toolbar, text='Сохранить config', command=self.save).pack(side='left')
-        ttk.Button(toolbar, text='Собрать шаблоны', command=lambda: Collector(self.root, self.image, self.template_dir, self.rois)).pack(side='left')
-        ttk.Label(toolbar, text='Карты: вся карта; opp: только рубашка; oppstack: необязательно').pack(side='left')
+        ttk.Button(toolbar, text='Собрать шаблоны', command=self.collect_templates).pack(side='left')
+        ttk.Label(self.root, text='Карты: вся карта; opp: только рубашка; oppstack: необязательно', wraplength=1100).pack()
         self.canvas = tk.Canvas(self.root)
         self.canvas.pack()
         self.canvas.bind('<ButtonPress-1>', self.down)
@@ -140,9 +214,73 @@ class CalibrationApp:
         self.canvas.bind('<ButtonRelease-1>', self.up)
         self.start = self.box = None
         self.render()
+        self.update_hint()
+        self.root.deiconify()
+
+    def update_hint(self):
+        if self.stage == 'client':
+            self.status.set('1. Выделите клиентскую область игры. Для точного выбора окна в Windows задайте его заголовок в панели запуска.')
+        else:
+            missing = set(ROI_NAMES[:10])-self.rois.keys()
+            self.status.set(f'Зон: {len(self.rois)}, обязательных осталось: {len(missing)}. Сейчас {self.name.get()}: {roi_hint(self.name.get())}')
+
+    @staticmethod
+    def capture_config(config):
+        with mss.mss() as sct:
+            return grab(sct, config)
+
+    def capture_current(self):
+        return self.capture_config(dict(capture=self.capture, window_title=self.window_title))
+
+    def collect_templates(self):
+        if self.capture is None:
+            messagebox.showinfo('Сначала область игры', 'Выделите клиентскую область игры.', parent=self.root)
+            return
+        fresh_capture(self.root, self.capture_current, lambda image: Collector(self.root, image, self.template_dir, self.rois, capture=self.capture_current))
+
+    def reselect_client(self):
+        if self.rois and not messagebox.askyesno('Новая область', 'Текущие выделения будут убраны из редактора. Файл на диске не изменится до сохранения. Продолжить?', parent=self.root):
+            return
+        def capture():
+            import numpy as np
+            with mss.mss() as sct:
+                self.monitor = dict(sct.monitors[0])
+                return np.asarray(sct.grab(self.monitor))[:, :, :3].copy()
+        def accept(image):
+            self.desktop = self.image = image
+            self.capture = None
+            self.rois = {}
+            self.window_title = ''
+            self.stage = 'client'
+            self.name.set('hero1')
+            self.start = self.box = None
+            self.render()
+            self.update_hint()
+        fresh_capture(self.root, capture, accept)
+
+    def refresh(self):
+        def capture():
+            if self.stage == 'rois':
+                actual = window_rect(self.window_title)
+                if actual:
+                    self.capture = actual
+                return self.capture_current()
+            import numpy as np
+            with mss.mss() as sct:
+                self.monitor = dict(sct.monitors[0])
+                return np.asarray(sct.grab(self.monitor))[:, :, :3].copy()
+
+        def accept(image):
+            self.image = image
+            if self.stage == 'client':
+                self.desktop = image
+            self.start = self.box = None
+            self.render()
+            self.update_hint()
+        fresh_capture(self.root, capture, accept)
 
     def render(self):
-        self.scale = min(1, 1200/self.image.shape[1], 720/self.image.shape[0])
+        self.scale = preview_scale(self.image.shape[1], self.image.shape[0], self.root.winfo_screenwidth(), self.root.winfo_screenheight())
         self.photo = ImageTk.PhotoImage(Image.fromarray(cv2.cvtColor(self.image, cv2.COLOR_BGR2RGB)).resize((round(self.image.shape[1]*self.scale), round(self.image.shape[0]*self.scale))))
         self.canvas.config(width=self.photo.width(), height=self.photo.height())
         self.canvas.delete('all')
@@ -179,7 +317,7 @@ class CalibrationApp:
             index = ROI_NAMES.index(self.name.get())
             self.name.set(ROI_NAMES[min(index+1, len(ROI_NAMES)-1)])
         self.start = None
-        self.status.set(f'Зон: {len(self.rois)}. Выделите {self.name.get()}; необязательные места можно пропустить.')
+        self.update_hint()
         self.render()
 
     def save(self):
@@ -188,7 +326,9 @@ class CalibrationApp:
         if missing or self.capture is None:
             messagebox.showerror('Не все зоны', ', '.join(sorted(missing)))
             return
-        title = simpledialog.askstring('Привязка окна', 'Windows: уникальная часть заголовка игры для слежения.\nLinux/macOS: оставьте пустым (фиксированная область).', parent=self.root) or ''
+        title = simpledialog.askstring('Привязка окна', 'Windows: уникальная часть заголовка игры для слежения.\nLinux/macOS: оставьте пустым (фиксированная область).', parent=self.root, initialvalue=self.window_title)
+        if title is None:
+            return
         if title:
             try:
                 actual = window_rect(title)
@@ -198,10 +338,18 @@ class CalibrationApp:
             except RuntimeError as exc:
                 messagebox.showerror('Окно', str(exc))
                 return
-        data = dict(version=1, capture=self.capture, window_title=title, rois=self.rois,
-                    confidence=0.84, margin=0.04, interval=0.275)
-        self.path.parent.mkdir(parents=True, exist_ok=True)
-        self.path.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding='utf-8')
+        data = dict(self.base_config)
+        data.update(version=1, capture=self.capture, window_title=title, rois=self.rois)
+        data.setdefault('confidence', .84)
+        data.setdefault('margin', .04)
+        data.setdefault('interval', .275)
+        try:
+            save_config(self.path, data)
+        except (ValueError, OSError) as exc:
+            messagebox.showerror('Не удалось сохранить', str(exc), parent=self.root)
+            return
+        self.window_title = title
+        self.base_config = data
         self.status.set(f'Сохранено {self.path}. Теперь соберите шаблоны: карты, цифры, рубашка.')
 
     def run(self):

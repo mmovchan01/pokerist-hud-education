@@ -60,6 +60,7 @@ def window_rect(title):
     if sys.platform != 'win32' or not title:
         return None
     import ctypes
+    import os
     from ctypes import wintypes
     user = ctypes.windll.user32
     matches = []
@@ -67,6 +68,10 @@ def window_rect(title):
 
     @callback
     def visit(hwnd, _):
+        process = wintypes.DWORD()
+        user.GetWindowThreadProcessId(hwnd, ctypes.byref(process))
+        if process.value == os.getpid():
+            return True
         if user.IsWindowVisible(hwnd) and not user.IsIconic(hwnd):
             length = user.GetWindowTextLengthW(hwnd)
             buf = ctypes.create_unicode_buffer(length+1)
@@ -76,6 +81,7 @@ def window_rect(title):
         return True
 
     user.EnumWindows.argtypes = [callback, wintypes.LPARAM]
+    user.GetWindowThreadProcessId.argtypes = [wintypes.HWND, ctypes.POINTER(wintypes.DWORD)]
     user.IsWindowVisible.argtypes = [wintypes.HWND]
     user.IsIconic.argtypes = [wintypes.HWND]
     user.GetWindowTextLengthW.argtypes = [wintypes.HWND]
