@@ -1,4 +1,6 @@
 """Offline screenshot labelling. Choose cards from a list, save and continue."""
+import queue
+from concurrent.futures import ThreadPoolExecutor
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
 
@@ -10,8 +12,9 @@ from screenshot_album import Album, read_image
 from setup_support import selection_bounds, preview_scale
 from profile_support import load_profile
 
-from card_choices import CARD_CHOICES, choice_color, display_choice, resolve_choice
+from card_choices import CARD_CHOICES, choice_color, display_choice, resolve_choice, filtered_choices
 from color_choice import ColorChoice
+from editor_assistant import EditorAssistant, has_card_template
 
 
 class AlbumEditor:
@@ -24,12 +27,24 @@ class AlbumEditor:
         self.record = self.image = self.item_id = self.pending_rect = None
         self.start = self.box = None
         self.records = []
+        self.known_cards = set()
+        self.analysis_token = 0
+        self.last_auto = None
+        self.closed = False
+        self.assistant = EditorAssistant(args.templates)
+        self.executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix='label-assistant')
+        self.analysis_future = None
+        self.analysis_results = queue.Queue()
         self.status = tk.StringVar(value='Выберите снимок слева. Затем область и карту из списка.')
         self.kind = tk.StringVar(value='card')
         self.label = tk.StringVar()
         self.only_pending = tk.BooleanVar(value=False)
         self.cards_only = tk.BooleanVar(value=True)
         self.pin = tk.BooleanVar(value=False)
+        self.auto_known = tk.BooleanVar(value=True)
+        self.missing_only = tk.BooleanVar(value=True)
+        self.add_variants = tk.BooleanVar(value=False)
+        self.coverage = tk.StringVar(value='База карт: проверка…')
         bar = ttk.Frame(self.root)
         bar.pack(fill='x', padx=8, pady=5)
         ttk.Button(bar, text='Обновить список', command=self.refresh).pack(side='left')
@@ -38,6 +53,12 @@ class AlbumEditor:
         ttk.Checkbutton(bar, text='Только незавершённые снимки', variable=self.only_pending, command=self.refresh).pack(side='left')
         ttk.Checkbutton(bar, text='Поверх всех окон', variable=self.pin,
                         command=lambda: self.root.attributes('-topmost', self.pin.get())).pack(side='right')
+        assist = ttk.Frame(self.root)
+        assist.pack(fill='x', padx=8, pady=3)
+        ttk.Checkbutton(assist, text='Распознавать и пропускать известные', variable=self.auto_known, command=self.toggle_assistant).pack(side='left')
+        ttk.Checkbutton(assist, text='Только недостающие карты', variable=self.missing_only, command=self.refresh_choices).pack(side='left')
+        ttk.Button(assist, text='Проверить последнюю авто', command=self.review_last).pack(side='left', padx=5)
+        ttk.Label(assist, textvariable=self.coverage).pack(side='right')
         panes = ttk.Panedwindow(self.root, orient='horizontal')
         panes.pack(fill='both', expand=True, padx=8)
         left = ttk.Frame(panes, width=230)
@@ -74,12 +95,91 @@ class AlbumEditor:
         self.label_picker.pack(side='left', padx=6)
         ttk.Button(controls, text='Сохранить → дальше (Enter)', command=self.save_next).pack(side='left')
         ttk.Button(controls, text='Нечитаемо / пропустить', command=self.skip).pack(side='left', padx=5)
+        ttk.Checkbutton(right, text='Добавлять новые образцы уже известных карт (другое освещение / перекрытие)', variable=self.add_variants, command=self.toggle_assistant).pack(anchor='w')
         self.preview = ttk.Label(right)
         self.preview.pack(anchor='w', pady=4)
         ttk.Label(right, textvariable=self.status, wraplength=850, justify='left').pack(fill='x', pady=5)
         self.root.bind('<Return>', self.enter)
         self.root.protocol('WM_DELETE_WINDOW', self.close)
+        self.label.trace_add('write', self.cancel_analysis)
         self.refresh()
+        self.root.after(100, self.poll_analysis)
+
+    def cancel_analysis(self, *args):
+        self.analysis_token += 1
+        if self.analysis_future is not None:
+            self.analysis_future.cancel()
+
+    def refresh_choices(self):
+        kind, label = resolve_choice(self.kind.get(), self.label.get())
+        self.set_choices(label)
+
+    def toggle_assistant(self):
+        self.cancel_analysis()
+        if self.record and self.item_id and self.pending_rect is None:
+            self.request_analysis()
+
+    def request_analysis(self):
+        self.cancel_analysis()
+        if not self.record or not self.item_id:
+            return
+        item = self.record['items'][self.item_id]
+        if item['kind'] not in ('card', 'empty') or self.kind.get() not in ('card', 'empty'):
+            return
+        token = self.analysis_token
+        identifier, name, revision = self.record['id'], self.item_id, self.record['revision']
+        crop = Rect(*(self.pending_rect or item['rect'])).crop(self.image).copy()
+        future = self.analysis_future = self.executor.submit(self.assistant.analyze, crop)
+        def done(future):
+            if not future.cancelled():
+                try:
+                    suggestion, known = future.result()
+                    self.analysis_results.put((token, identifier, name, revision, suggestion, known, None))
+                except Exception as exc:
+                    self.analysis_results.put((token, identifier, name, revision, None, set(), str(exc)))
+        future.add_done_callback(done)
+
+    def poll_analysis(self):
+        if self.closed:
+            return
+        while not self.analysis_results.empty():
+            token, identifier, name, revision, suggestion, known, error = self.analysis_results.get_nowait()
+            if token != self.analysis_token or not self.record or (identifier, name, revision) != (self.record['id'], self.item_id, self.record['revision']):
+                continue
+            if error:
+                self.status.set('Автораспознавание недоступно: '+error)
+                continue
+            self.known_cards = known
+            self.coverage.set(f'В базе: {len(known)}/52')
+            if self.record['items'][name]['status'] != 'pending':
+                self.refresh_choices()
+                item = self.record['items'][name]
+                self.status.set(f'{name}: {item["status"]}, {display_choice(item.get("label")) or item.get("label") or "без метки"}. Можно исправить вручную. Автоподпись не создаёт шаблонов.')
+            elif suggestion and suggestion.automatic and self.auto_known.get() and not self.add_variants.get() and self.pending_rect is None:
+                try:
+                    self.record = self.album.accept_known(identifier, name, suggestion.kind, suggestion.label, suggestion.confidence, suggestion.method, revision)
+                    self.last_auto = identifier, name
+                    # No template is exported from an automatic decision.
+                    self.advance()
+                except (OSError, ValueError, KeyError) as exc:
+                    self.status.set(str(exc))
+            elif suggestion and self.auto_known.get():
+                self.set_choices(suggestion.label)
+                self.status.set(f'Предположение: {display_choice(suggestion.label)}, похожесть {suggestion.confidence:.0%}. Проверьте и нажмите Enter, либо исправьте. Для нового образца знакомой карты включите «Добавлять новые образцы».')
+            else:
+                self.refresh_choices()
+                self.status.set(('Карта не распознана — выберите вручную. ' if self.auto_known.get() else 'Автопропуск выключен — выберите вручную. ')+'Чтобы выбрать знакомую карту, отключите «Только недостающие карты».')
+        self.root.after(100, self.poll_analysis)
+
+    def review_last(self):
+        if not self.last_auto or not self.dirty_ok():
+            return
+        self.auto_known.set(False)
+        self.cancel_analysis()
+        identifier, name = self.last_auto
+        self.open_record(identifier)
+        self.choose_item(name)
+        self.status.set('Проверка автоподписи. Автопропуск выключен: можно исправить метку или выбрать другую область.')
 
     def enter(self, event=None):
         # Avoid binding a second save to the button's own activation.
@@ -103,6 +203,7 @@ class AlbumEditor:
     def refresh(self):
         if not self.dirty_ok():
             return
+        self.cancel_analysis()
         old_id = self.record['id'] if self.record else None
         records, errors = self.album.records()
         self.records = [r for r in records if not self.only_pending.get() or any(r['items'][n]['status'] == 'pending' for n in self.eligible(r))]
@@ -147,14 +248,14 @@ class AlbumEditor:
         if self.image is None:
             return
         h, w = self.image.shape[:2]
-        self.scale = min(preview_scale(w, h, self.root.winfo_screenwidth()-260, self.root.winfo_screenheight()), max(300, self.root.winfo_screenwidth()-330)/w, max(160, min(430, self.root.winfo_screenheight()-440))/h)
+        self.scale = min(preview_scale(w, h, self.root.winfo_screenwidth()-260, self.root.winfo_screenheight()), max(300, self.root.winfo_screenwidth()-330)/w, max(160, min(380, self.root.winfo_screenheight()-540))/h)
         self.photo = ImageTk.PhotoImage(Image.fromarray(cv2.cvtColor(self.image, cv2.COLOR_BGR2RGB)).resize((round(w*self.scale), round(h*self.scale))))
         self.canvas.config(width=self.photo.width(), height=self.photo.height())
         self.canvas.delete('all')
         self.canvas.create_image(0, 0, anchor='nw', image=self.photo)
         for name, item in self.record['items'].items():
             x, y, cw, ch = Rect(*item['rect']).pixels(self.photo.width(), self.photo.height())
-            color = {'exported': '#30dd99', 'skipped': '#888888'}.get(item['status'], '#f1b942')
+            color = {'exported': '#30dd99', 'reused': '#65b9ff', 'skipped': '#888888'}.get(item['status'], '#f1b942')
             self.canvas.create_rectangle(x, y, x+cw, y+ch, outline=color)
             self.canvas.create_text(x, y, text=name, anchor='sw', fill=color)
 
@@ -173,10 +274,11 @@ class AlbumEditor:
         self.box = self.canvas.create_rectangle(x, y, x+w, y+h, outline='#ffffff', width=2, tags='selection')
         self.show_crop(item['rect'])
         self.status.set(f'{name}: {item["status"]}. '+('Зоны предложены автоматически — проверьте рамки! ' if self.record.get('suggested_rois') else '')+'Выберите метку и нажмите Enter. Пустой слот: пункт «Пусто» в списке карт; анимация/перекрытие: пропустить.')
+        self.request_analysis()
 
     def set_choices(self, stored=None):
         kind = self.kind.get()
-        values = list(CARD_CHOICES) if kind == 'card' else (['empty'] if kind == 'empty' else (['back'] if kind == 'back' else list('0123456789.,KMB')))
+        values = filtered_choices(self.known_cards, self.missing_only.get(), stored) if kind == 'card' else (['empty'] if kind == 'empty' else (['back'] if kind == 'back' else list('0123456789.,KMB')))
         self.label_picker.config(values=values)
         if kind == 'card':
             display = display_choice(stored)
@@ -189,13 +291,14 @@ class AlbumEditor:
         if not crop.size:
             return
         h, w = crop.shape[:2]
-        scale = min(5, 450/w, 115/h)
+        scale = min(5, 450/w, 90/h)
         self.crop_photo = ImageTk.PhotoImage(Image.fromarray(cv2.cvtColor(crop, cv2.COLOR_BGR2RGB)).resize((max(1, round(w*scale)), max(1, round(h*scale)))))
         self.preview.config(image=self.crop_photo)
 
     def down(self, event):
         if self.image is None:
             return
+        self.cancel_analysis()
         self.start = event.x, event.y
         self.canvas.delete('selection')
         self.box = self.canvas.create_rectangle(event.x, event.y, event.x, event.y, outline='white', width=2, tags='selection')
@@ -229,8 +332,12 @@ class AlbumEditor:
         if not self.record or not self.item_id:
             return
         kind, label = resolve_choice(self.kind.get(), self.label.get())
+        self.cancel_analysis()
         try:
-            self.record = self.album.annotate(self.record['id'], self.item_id, kind, label,
+            if not skip and kind == 'card' and (label in self.known_cards or has_card_template(self.album.templates, label)) and not self.add_variants.get() and self.record['items'][self.item_id]['status'] == 'pending':
+                self.record = self.album.accept_known(self.record['id'], self.item_id, kind, label, 1., 'human confirmed existing', self.record['revision'], automatic=False, rect=self.pending_rect)
+            else:
+                self.record = self.album.annotate(self.record['id'], self.item_id, kind, label,
                                               rect=self.pending_rect, skip=skip, revision=self.record['revision'])
             self.pending_rect = None
             self.advance()
@@ -275,6 +382,9 @@ class AlbumEditor:
 
     def close(self):
         if self.dirty_ok():
+            self.closed = True
+            self.cancel_analysis()
+            self.executor.shutdown(wait=False, cancel_futures=True)
             self.root.destroy()
 
     def run(self):

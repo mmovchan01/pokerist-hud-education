@@ -23,3 +23,9 @@ def resolve_choice(kind, display):
         label = CARD_CHOICES.get(display, display)
         return ('empty', 'empty') if label == 'empty' else ('card', label)
     return kind, display
+
+
+def filtered_choices(known, missing_only=False, keep_label=None):
+    """Never hide empty or a current suggestion/correction, even in missing mode."""
+    return [text for text, label in CARD_CHOICES.items()
+            if label == 'empty' or not missing_only or label not in known or label == keep_label]

@@ -107,9 +107,9 @@ class Album:
             if not re.fullmatch('[A-Za-z0-9_-]+', name) or not isinstance(item, dict):
                 raise ValueError('Некорректная область в альбоме')
             validate_rect(item.get('rect', []))
-            if item.get('status') not in ('pending', 'exported', 'skipped') or item.get('kind') not in ('card', 'glyph', 'back', 'empty'):
+            if item.get('status') not in ('pending', 'exported', 'skipped', 'reused') or item.get('kind') not in ('card', 'glyph', 'back', 'empty'):
                 raise ValueError('Некорректный статус области')
-            if item['status'] == 'exported' and not valid_label(item['kind'], item.get('label')):
+            if item['status'] in ('exported', 'reused') and not valid_label(item['kind'], item.get('label')):
                 raise ValueError('Некорректная сохранённая метка')
         return record
 
@@ -166,11 +166,29 @@ class Album:
             item['export'] = relative.as_posix()
         else:
             item['export'] = None
+        item.pop('recognition', None)
         item.update(rect=coordinates, kind=kind, label=None if skip else label,
                     status='skipped' if skip else 'exported')
         self._commit(record)
         if old_export and old_export != new_export:
             old_export.unlink(missing_ok=True)
+        return record
+
+    def accept_known(self, identifier, item_id, kind, label, confidence, method, revision, automatic=True, rect=None):
+        """Mark a pending crop as already known, without writing ANY template."""
+        record = self.load(identifier)
+        if record['revision'] != revision:
+            raise ValueError('Снимок изменился во время распознавания')
+        item = record['items'][item_id]
+        if item['status'] != 'pending' or item.get('export'):
+            raise ValueError('Автоподпись разрешена только для новой области')
+        if kind not in ('card', 'empty') or not valid_label(kind, label) or not np.isfinite(confidence) or not .94 <= confidence <= 1.000001:
+            raise ValueError('Недостаточная уверенность или неверная метка')
+        coordinates = list(rect if rect is not None else item['rect'])
+        validate_rect(coordinates)
+        item.update(rect=coordinates, kind=kind, label=label, status='reused', export=None,
+                    recognition={'confidence': float(confidence), 'method': method, 'automatic': bool(automatic)})
+        self._commit(record)
         return record
 
     def add_region(self, identifier, rect):
