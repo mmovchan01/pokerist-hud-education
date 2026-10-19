@@ -33,10 +33,11 @@ def test_empty_choice_exports_as_empty_not_card(tmp_path):
     assert not (album.templates/'card').exists()
 
 
-def test_known_card_stays_selectable_by_default():
-    """Regression: 3♥ with one saved sample disappeared from the picker, so it could not be added again."""
+def test_known_cards_hidden_by_default_but_always_reachable():
+    """Known cards are recognized automatically; the full list must remain available when needed."""
     from card_choices import MISSING_ONLY_DEFAULT
-    assert MISSING_ONLY_DEFAULT is False
+    assert MISSING_ONLY_DEFAULT is True
     known = {'3h'}
-    assert display_choice('3h') in filtered_choices(known, MISSING_ONLY_DEFAULT)
-    assert display_choice('3h') not in filtered_choices(known, True)
+    assert display_choice('3h') not in filtered_choices(known, MISSING_ONLY_DEFAULT)
+    assert display_choice('3h') in filtered_choices(known, False)
+    assert display_choice('Ah') in filtered_choices(known, MISSING_ONLY_DEFAULT)

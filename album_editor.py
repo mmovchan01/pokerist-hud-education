@@ -46,6 +46,7 @@ class AlbumEditor:
         self.auto_known = tk.BooleanVar(value=True)
         self.missing_only = tk.BooleanVar(value=MISSING_ONLY_DEFAULT)
         self.add_variants = tk.BooleanVar(value=False)
+        self.full_list = False
         self.coverage = tk.StringVar(value='База карт: проверка…')
         bar = ttk.Frame(self.root)
         bar.pack(fill='x', padx=8, pady=5)
@@ -124,6 +125,7 @@ class AlbumEditor:
 
     def toggle_assistant(self):
         self.cancel_analysis()
+        self.refresh_choices()
         if self.record and self.item_id and self.pending_rect is None:
             self.request_analysis()
 
@@ -175,8 +177,10 @@ class AlbumEditor:
                 self.set_choices(suggestion.label)
                 self.status.set(f'Предположение: {display_choice(suggestion.label)}, похожесть {suggestion.confidence:.0%}. Проверьте и нажмите Enter (образец сохранится в базу), либо исправьте.')
             else:
+                # Unsure: show every card, including known ones, so the crop can always be labelled.
+                self.full_list = True
                 self.refresh_choices()
-                self.status.set(('Карта не распознана — выберите вручную. ' if self.auto_known.get() else 'Автопропуск выключен — выберите вручную. ')+'Чтобы выбрать знакомую карту, снимите «Скрыть уже известные карты».')
+                self.status.set(('Карта не распознана — выберите вручную из полного списка. ' if self.auto_known.get() else 'Автопропуск выключен — выберите вручную. ')+'Если карта уже в базе, но не узнана, выберите её: образец сохранится.')
         self.root.after(100, self.poll_analysis)
 
     def review_last(self):
@@ -273,6 +277,7 @@ class AlbumEditor:
         self.item_id = name
         self.item_name.set(name)
         self.pending_rect = None
+        self.full_list = False
         item = self.record['items'][name]
         # Reopen an empty card slot in the card list, with 'Пусто' selected.
         self.kind.set('card' if item['kind'] == 'empty' and name.startswith(('hero', 'board')) else item['kind'])
@@ -286,7 +291,10 @@ class AlbumEditor:
 
     def set_choices(self, stored=None):
         kind = self.kind.get()
-        values = filtered_choices(self.known_cards, self.missing_only.get(), stored) if kind == 'card' else (['empty'] if kind == 'empty' else (['back'] if kind == 'back' else list('0123456789.,KMB')))
+        # Hide known cards only when they are recognized automatically: unsure recognition
+        # or 'Добавлять новые образцы' must always leave every card selectable.
+        hide_known = self.missing_only.get() and not self.add_variants.get() and not self.full_list
+        values = filtered_choices(self.known_cards, hide_known, stored) if kind == 'card' else (['empty'] if kind == 'empty' else (['back'] if kind == 'back' else list('0123456789.,KMB')))
         self.label_picker.config(values=values)
         if kind == 'card':
             display = display_choice(stored)
