@@ -3,8 +3,9 @@ import numpy as np
 import pytest
 
 from card_choices import CARD_CHOICES, EMPTY_CHOICE, display_choice, filtered_choices
-from editor_assistant import EditorAssistant, has_card_template
+from editor_assistant import EditorAssistant, has_card_template, identical_sample_exists
 from profile_support import BUILTIN
+from screen import Rect
 from screenshot_album import Album
 
 
@@ -106,3 +107,17 @@ def test_human_reuse_preserves_adjusted_crop(tmp_path):
     assert record['items']['hero1']['rect'] == rect
     assert not record['items']['hero1']['recognition']['automatic']
     assert not album.templates.exists()
+
+
+def test_identical_sample_detection_is_exact_and_per_label(tmp_path):
+    album = Album(tmp_path/'inbox', tmp_path/'templates')
+    rng = np.random.default_rng(0)
+    first = rng.integers(0, 255, (60, 80, 3), dtype=np.uint8)
+    other = rng.integers(0, 255, (60, 80, 3), dtype=np.uint8)
+    record = album.add(first, {'hero1': [0, 0, .5, .5]}, {})
+    album.annotate(record['id'], 'hero1', 'card', 'Ks')
+    crop = Rect(0, 0, .5, .5).crop(first)
+    assert identical_sample_exists(album.templates, 'card', 'Ks', crop)
+    assert not identical_sample_exists(album.templates, 'card', 'Ah', crop)
+    assert not identical_sample_exists(album.templates, 'card', 'Ks', Rect(0, 0, .5, .5).crop(other))
+    assert not identical_sample_exists(album.templates, 'card', 'Ks', None)

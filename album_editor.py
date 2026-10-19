@@ -14,7 +14,7 @@ from profile_support import load_profile
 
 from card_choices import choice_color, display_choice, resolve_choice, filtered_choices
 from color_choice import ColorChoice
-from editor_assistant import EditorAssistant, has_card_template
+from editor_assistant import EditorAssistant, identical_sample_exists
 from ui_theme import PALETTE as P, apply_theme, font
 
 
@@ -173,7 +173,7 @@ class AlbumEditor:
                     self.status.set(str(exc))
             elif suggestion and self.auto_known.get():
                 self.set_choices(suggestion.label)
-                self.status.set(f'Предположение: {display_choice(suggestion.label)}, похожесть {suggestion.confidence:.0%}. Проверьте и нажмите Enter, либо исправьте. Для нового образца знакомой карты включите «Добавлять новые образцы».')
+                self.status.set(f'Предположение: {display_choice(suggestion.label)}, похожесть {suggestion.confidence:.0%}. Проверьте и нажмите Enter (образец сохранится в базу), либо исправьте.')
             else:
                 self.refresh_choices()
                 self.status.set(('Карта не распознана — выберите вручную. ' if self.auto_known.get() else 'Автопропуск выключен — выберите вручную. ')+'Чтобы выбрать знакомую карту, отключите «Только недостающие карты».')
@@ -337,18 +337,34 @@ class AlbumEditor:
             self.status.set(str(exc))
 
     def apply(self, skip=False):
+        """Save the human decision. A manual choice always stores its crop unless the exact same pixels exist.
+
+        Earlier versions dropped a second photo of an already known card (status 'reused', no file),
+        so the user could not add more samples. Only an automatic match skips writing now.
+        """
         if not self.record or not self.item_id:
             return
         kind, label = resolve_choice(self.kind.get(), self.label.get())
         self.cancel_analysis()
+        note = ''
         try:
-            if not skip and kind == 'card' and (label in self.known_cards or has_card_template(self.album.templates, label)) and not self.add_variants.get() and self.record['items'][self.item_id]['status'] == 'pending':
-                self.record = self.album.accept_known(self.record['id'], self.item_id, kind, label, 1., 'human confirmed existing', self.record['revision'], automatic=False, rect=self.pending_rect)
+            item = self.record['items'][self.item_id]
+            rect = self.pending_rect
+            crop = Rect(*(rect or item['rect'])).crop(self.image) if self.image is not None else None
+            if (not skip and kind == 'card' and item['status'] == 'pending'
+                    and identical_sample_exists(self.album.templates, kind, label, crop)):
+                self.record = self.album.accept_known(self.record['id'], self.item_id, kind, label, 1., 'human confirmed existing',
+                                                      self.record['revision'], automatic=False, rect=rect)
+                note = 'Точно такой же образец уже есть в базе — файл не дублируется.'
             else:
                 self.record = self.album.annotate(self.record['id'], self.item_id, kind, label,
-                                              rect=self.pending_rect, skip=skip, revision=self.record['revision'])
+                                                  rect=rect, skip=skip, revision=self.record['revision'])
+                if not skip and kind == 'card':
+                    note = f'Образец карты {label} сохранён в базу.'
             self.pending_rect = None
             self.advance()
+            if note:
+                self.status.set(note)
         except (OSError, ValueError, KeyError) as exc:
             messagebox.showerror('Не удалось сохранить', str(exc), parent=self.root)
 

@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from screenshot_album import CARD_LABELS
+from template_labels import label_folder
 from vision import Recognizer, TemplateBank, load_template
 
 
@@ -113,3 +114,19 @@ def has_card_template(root, label):
     if label not in CARD_LABELS:
         return False
     return any(load_template(path) is not None for path in (Path(root)/'card'/label).glob('*.png'))
+
+
+def identical_sample_exists(root, kind, label, crop):
+    """True only when the very same pixels are already stored for this kind and label.
+
+    Used to avoid writing a duplicate file; a different photo of a known card is NOT a duplicate.
+    """
+    if crop is None or not crop.size:
+        return False
+    key = pixel_key(crop)
+    folder = Path(root)/kind/label_folder(label)
+    for path in folder.glob('*.png'):
+        image = load_template(path)
+        if image is not None and pixel_key(image) == key:
+            return True
+    return False
