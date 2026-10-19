@@ -1,0 +1,482 @@
+[
+  {
+    "file": "verification_crops/photo1_hero1.png",
+    "source_frame": 1,
+    "roi": "hero1",
+    "ground_truth": null,
+    "expected_status": "empty",
+    "numeric": false
+  },
+  {
+    "file": "verification_crops/photo1_hero2.png",
+    "source_frame": 1,
+    "roi": "hero2",
+    "ground_truth": null,
+    "expected_status": "empty",
+    "numeric": false
+  },
+  {
+    "file": "verification_crops/photo1_board1.png",
+    "source_frame": 1,
+    "roi": "board1",
+    "ground_truth": null,
+    "expected_status": "empty",
+    "numeric": false
+  },
+  {
+    "file": "verification_crops/photo1_board2.png",
+    "source_frame": 1,
+    "roi": "board2",
+    "ground_truth": null,
+    "expected_status": "empty",
+    "numeric": false
+  },
+  {
+    "file": "verification_crops/photo1_board3.png",
+    "source_frame": 1,
+    "roi": "board3",
+    "ground_truth": null,
+    "expected_status": "empty",
+    "numeric": false
+  },
+  {
+    "file": "verification_crops/photo1_board4.png",
+    "source_frame": 1,
+    "roi": "board4",
+    "ground_truth": null,
+    "expected_status": "empty",
+    "numeric": false
+  },
+  {
+    "file": "verification_crops/photo1_board5.png",
+    "source_frame": 1,
+    "roi": "board5",
+    "ground_truth": null,
+    "expected_status": "empty",
+    "numeric": false
+  },
+  {
+    "file": "verification_crops/photo1_pot.png",
+    "source_frame": 1,
+    "roi": "pot",
+    "ground_truth": null,
+    "expected_status": "unknown",
+    "numeric": true
+  },
+  {
+    "file": "verification_crops/photo1_stack.png",
+    "source_frame": 1,
+    "roi": "stack",
+    "ground_truth": 19962,
+    "expected_status": "known",
+    "numeric": true
+  },
+  {
+    "file": "verification_crops/photo1_call.png",
+    "source_frame": 1,
+    "roi": "call",
+    "ground_truth": null,
+    "expected_status": "unknown",
+    "numeric": true
+  },
+  {
+    "file": "verification_crops/photo2_hero1.png",
+    "source_frame": 2,
+    "roi": "hero1",
+    "ground_truth": "5d",
+    "expected_status": "known",
+    "numeric": false
+  },
+  {
+    "file": "verification_crops/photo2_hero2.png",
+    "source_frame": 2,
+    "roi": "hero2",
+    "ground_truth": "Ad",
+    "expected_status": "known",
+    "numeric": false
+  },
+  {
+    "file": "verification_crops/photo2_board1.png",
+    "source_frame": 2,
+    "roi": "board1",
+    "ground_truth": null,
+    "expected_status": "empty",
+    "numeric": false
+  },
+  {
+    "file": "verification_crops/photo2_board2.png",
+    "source_frame": 2,
+    "roi": "board2",
+    "ground_truth": null,
+    "expected_status": "empty",
+    "numeric": false
+  },
+  {
+    "file": "verification_crops/photo2_board3.png",
+    "source_frame": 2,
+    "roi": "board3",
+    "ground_truth": null,
+    "expected_status": "empty",
+    "numeric": false
+  },
+  {
+    "file": "verification_crops/photo2_board4.png",
+    "source_frame": 2,
+    "roi": "board4",
+    "ground_truth": null,
+    "expected_status": "empty",
+    "numeric": false
+  },
+  {
+    "file": "verification_crops/photo2_board5.png",
+    "source_frame": 2,
+    "roi": "board5",
+    "ground_truth": null,
+    "expected_status": "empty",
+    "numeric": false
+  },
+  {
+    "file": "verification_crops/photo2_pot.png",
+    "source_frame": 2,
+    "roi": "pot",
+    "ground_truth": null,
+    "expected_status": "unknown",
+    "numeric": true
+  },
+  {
+    "file": "verification_crops/photo2_stack.png",
+    "source_frame": 2,
+    "roi": "stack",
+    "ground_truth": 19950,
+    "expected_status": "known",
+    "numeric": true
+  },
+  {
+    "file": "verification_crops/photo2_call.png",
+    "source_frame": 2,
+    "roi": "call",
+    "ground_truth": 1300,
+    "expected_status": "unknown",
+    "numeric": true
+  },
+  {
+    "file": "verification_crops/photo3_hero1.png",
+    "source_frame": 3,
+    "roi": "hero1",
+    "ground_truth": "Qc",
+    "expected_status": "known",
+    "numeric": false
+  },
+  {
+    "file": "verification_crops/photo3_hero2.png",
+    "source_frame": 3,
+    "roi": "hero2",
+    "ground_truth": "2d",
+    "expected_status": "known",
+    "numeric": false
+  },
+  {
+    "file": "verification_crops/photo3_board1.png",
+    "source_frame": 3,
+    "roi": "board1",
+    "ground_truth": "4c",
+    "expected_status": "known",
+    "numeric": false
+  },
+  {
+    "file": "verification_crops/photo3_board2.png",
+    "source_frame": 3,
+    "roi": "board2",
+    "ground_truth": "Qd",
+    "expected_status": "known",
+    "numeric": false
+  },
+  {
+    "file": "verification_crops/photo3_board3.png",
+    "source_frame": 3,
+    "roi": "board3",
+    "ground_truth": "Ts",
+    "expected_status": "known",
+    "numeric": false
+  },
+  {
+    "file": "verification_crops/photo3_board4.png",
+    "source_frame": 3,
+    "roi": "board4",
+    "ground_truth": null,
+    "expected_status": "empty",
+    "numeric": false
+  },
+  {
+    "file": "verification_crops/photo3_board5.png",
+    "source_frame": 3,
+    "roi": "board5",
+    "ground_truth": null,
+    "expected_status": "empty",
+    "numeric": false
+  },
+  {
+    "file": "verification_crops/photo3_pot.png",
+    "source_frame": 3,
+    "roi": "pot",
+    "ground_truth": 12600,
+    "expected_status": "known",
+    "numeric": true
+  },
+  {
+    "file": "verification_crops/photo3_stack.png",
+    "source_frame": 3,
+    "roi": "stack",
+    "ground_truth": 19900,
+    "expected_status": "known",
+    "numeric": true
+  },
+  {
+    "file": "verification_crops/photo3_call.png",
+    "source_frame": 3,
+    "roi": "call",
+    "ground_truth": null,
+    "expected_status": "unknown",
+    "numeric": true
+  },
+  {
+    "file": "verification_crops/photo4_hero1.png",
+    "source_frame": 4,
+    "roi": "hero1",
+    "ground_truth": "Ks",
+    "expected_status": "known",
+    "numeric": false
+  },
+  {
+    "file": "verification_crops/photo4_hero2.png",
+    "source_frame": 4,
+    "roi": "hero2",
+    "ground_truth": "8d",
+    "expected_status": "known",
+    "numeric": false
+  },
+  {
+    "file": "verification_crops/photo4_board1.png",
+    "source_frame": 4,
+    "roi": "board1",
+    "ground_truth": null,
+    "expected_status": "empty",
+    "numeric": false
+  },
+  {
+    "file": "verification_crops/photo4_board2.png",
+    "source_frame": 4,
+    "roi": "board2",
+    "ground_truth": null,
+    "expected_status": "empty",
+    "numeric": false
+  },
+  {
+    "file": "verification_crops/photo4_board3.png",
+    "source_frame": 4,
+    "roi": "board3",
+    "ground_truth": null,
+    "expected_status": "empty",
+    "numeric": false
+  },
+  {
+    "file": "verification_crops/photo4_board4.png",
+    "source_frame": 4,
+    "roi": "board4",
+    "ground_truth": null,
+    "expected_status": "empty",
+    "numeric": false
+  },
+  {
+    "file": "verification_crops/photo4_board5.png",
+    "source_frame": 4,
+    "roi": "board5",
+    "ground_truth": null,
+    "expected_status": "empty",
+    "numeric": false
+  },
+  {
+    "file": "verification_crops/photo4_pot.png",
+    "source_frame": 4,
+    "roi": "pot",
+    "ground_truth": null,
+    "expected_status": "unknown",
+    "numeric": true
+  },
+  {
+    "file": "verification_crops/photo4_stack.png",
+    "source_frame": 4,
+    "roi": "stack",
+    "ground_truth": 19850,
+    "expected_status": "known",
+    "numeric": true
+  },
+  {
+    "file": "verification_crops/photo4_call.png",
+    "source_frame": 4,
+    "roi": "call",
+    "ground_truth": 1200,
+    "expected_status": "unknown",
+    "numeric": true
+  },
+  {
+    "file": "verification_crops/photo5_hero1.png",
+    "source_frame": 5,
+    "roi": "hero1",
+    "ground_truth": "Ks",
+    "expected_status": "known",
+    "numeric": false
+  },
+  {
+    "file": "verification_crops/photo5_hero2.png",
+    "source_frame": 5,
+    "roi": "hero2",
+    "ground_truth": "8d",
+    "expected_status": "known",
+    "numeric": false
+  },
+  {
+    "file": "verification_crops/photo5_board1.png",
+    "source_frame": 5,
+    "roi": "board1",
+    "ground_truth": "6c",
+    "expected_status": "known",
+    "numeric": false
+  },
+  {
+    "file": "verification_crops/photo5_board2.png",
+    "source_frame": 5,
+    "roi": "board2",
+    "ground_truth": "Qs",
+    "expected_status": "known",
+    "numeric": false
+  },
+  {
+    "file": "verification_crops/photo5_board3.png",
+    "source_frame": 5,
+    "roi": "board3",
+    "ground_truth": "7s",
+    "expected_status": "known",
+    "numeric": false
+  },
+  {
+    "file": "verification_crops/photo5_board4.png",
+    "source_frame": 5,
+    "roi": "board4",
+    "ground_truth": null,
+    "expected_status": "empty",
+    "numeric": false
+  },
+  {
+    "file": "verification_crops/photo5_board5.png",
+    "source_frame": 5,
+    "roi": "board5",
+    "ground_truth": null,
+    "expected_status": "empty",
+    "numeric": false
+  },
+  {
+    "file": "verification_crops/photo5_pot.png",
+    "source_frame": 5,
+    "roi": "pot",
+    "ground_truth": 2500,
+    "expected_status": "unknown",
+    "numeric": true
+  },
+  {
+    "file": "verification_crops/photo5_stack.png",
+    "source_frame": 5,
+    "roi": "stack",
+    "ground_truth": 18650,
+    "expected_status": "known",
+    "numeric": true
+  },
+  {
+    "file": "verification_crops/photo5_call.png",
+    "source_frame": 5,
+    "roi": "call",
+    "ground_truth": null,
+    "expected_status": "unknown",
+    "numeric": true
+  },
+  {
+    "file": "verification_crops/photo6_hero1.png",
+    "source_frame": 6,
+    "roi": "hero1",
+    "ground_truth": "Ks",
+    "expected_status": "known",
+    "numeric": false
+  },
+  {
+    "file": "verification_crops/photo6_hero2.png",
+    "source_frame": 6,
+    "roi": "hero2",
+    "ground_truth": "8d",
+    "expected_status": "known",
+    "numeric": false
+  },
+  {
+    "file": "verification_crops/photo6_board1.png",
+    "source_frame": 6,
+    "roi": "board1",
+    "ground_truth": "6c",
+    "expected_status": "known",
+    "numeric": false
+  },
+  {
+    "file": "verification_crops/photo6_board2.png",
+    "source_frame": 6,
+    "roi": "board2",
+    "ground_truth": "Qs",
+    "expected_status": "known",
+    "numeric": false
+  },
+  {
+    "file": "verification_crops/photo6_board3.png",
+    "source_frame": 6,
+    "roi": "board3",
+    "ground_truth": "7s",
+    "expected_status": "known",
+    "numeric": false
+  },
+  {
+    "file": "verification_crops/photo6_board4.png",
+    "source_frame": 6,
+    "roi": "board4",
+    "ground_truth": "5h",
+    "expected_status": "known",
+    "numeric": false
+  },
+  {
+    "file": "verification_crops/photo6_board5.png",
+    "source_frame": 6,
+    "roi": "board5",
+    "ground_truth": null,
+    "expected_status": "empty",
+    "numeric": false
+  },
+  {
+    "file": "verification_crops/photo6_pot.png",
+    "source_frame": 6,
+    "roi": "pot",
+    "ground_truth": 11900,
+    "expected_status": "known",
+    "numeric": true
+  },
+  {
+    "file": "verification_crops/photo6_stack.png",
+    "source_frame": 6,
+    "roi": "stack",
+    "ground_truth": 13950,
+    "expected_status": "known",
+    "numeric": true
+  },
+  {
+    "file": "verification_crops/photo6_call.png",
+    "source_frame": 6,
+    "roi": "call",
+    "ground_truth": 5500,
+    "expected_status": "known",
+    "numeric": true
+  }
+]

@@ -1,0 +1,922 @@
+[
+  {
+    "file": "templates/empty/empty/photo1_hero1.png",
+    "crop_xywh": [
+      695,
+      464,
+      24,
+      47
+    ],
+    "source": "photo1"
+  },
+  {
+    "file": "templates/empty/empty/photo1_hero2.png",
+    "crop_xywh": [
+      719,
+      464,
+      33,
+      47
+    ],
+    "source": "photo1"
+  },
+  {
+    "file": "templates/empty/empty/photo1_board1.png",
+    "crop_xywh": [
+      544,
+      311,
+      36,
+      48
+    ],
+    "source": "photo1"
+  },
+  {
+    "file": "templates/empty/empty/photo1_board2.png",
+    "crop_xywh": [
+      583,
+      311,
+      36,
+      48
+    ],
+    "source": "photo1"
+  },
+  {
+    "file": "templates/empty/empty/photo1_board3.png",
+    "crop_xywh": [
+      622,
+      311,
+      36,
+      48
+    ],
+    "source": "photo1"
+  },
+  {
+    "file": "templates/empty/empty/photo1_board4.png",
+    "crop_xywh": [
+      661,
+      311,
+      36,
+      48
+    ],
+    "source": "photo1"
+  },
+  {
+    "file": "templates/empty/empty/photo1_board5.png",
+    "crop_xywh": [
+      700,
+      311,
+      36,
+      48
+    ],
+    "source": "photo1"
+  },
+  {
+    "file": "templates/glyph/1/photo1_stack_0.png",
+    "crop_xywh": [
+      633,
+      492,
+      3,
+      15
+    ],
+    "source": "photo1"
+  },
+  {
+    "file": "templates/glyph/9/photo1_stack_1.png",
+    "crop_xywh": [
+      638,
+      492,
+      4,
+      15
+    ],
+    "source": "photo1"
+  },
+  {
+    "file": "templates/glyph/comma/photo1_stack_2.png",
+    "crop_xywh": [
+      643,
+      492,
+      2,
+      15
+    ],
+    "source": "photo1"
+  },
+  {
+    "file": "templates/glyph/9/photo1_stack_3.png",
+    "crop_xywh": [
+      646,
+      492,
+      5,
+      15
+    ],
+    "source": "photo1"
+  },
+  {
+    "file": "templates/glyph/6/photo1_stack_4.png",
+    "crop_xywh": [
+      651,
+      492,
+      5,
+      15
+    ],
+    "source": "photo1"
+  },
+  {
+    "file": "templates/glyph/2/photo1_stack_5.png",
+    "crop_xywh": [
+      656,
+      492,
+      6,
+      15
+    ],
+    "source": "photo1"
+  },
+  {
+    "file": "templates/card/5d/photo2_hero1.png",
+    "crop_xywh": [
+      695,
+      464,
+      24,
+      47
+    ],
+    "source": "photo2"
+  },
+  {
+    "file": "templates/card/Ad/photo2_hero2.png",
+    "crop_xywh": [
+      719,
+      464,
+      33,
+      47
+    ],
+    "source": "photo2"
+  },
+  {
+    "file": "templates/empty/empty/photo2_board1.png",
+    "crop_xywh": [
+      544,
+      311,
+      36,
+      48
+    ],
+    "source": "photo2"
+  },
+  {
+    "file": "templates/empty/empty/photo2_board2.png",
+    "crop_xywh": [
+      583,
+      311,
+      36,
+      48
+    ],
+    "source": "photo2"
+  },
+  {
+    "file": "templates/empty/empty/photo2_board3.png",
+    "crop_xywh": [
+      622,
+      311,
+      36,
+      48
+    ],
+    "source": "photo2"
+  },
+  {
+    "file": "templates/empty/empty/photo2_board4.png",
+    "crop_xywh": [
+      661,
+      311,
+      36,
+      48
+    ],
+    "source": "photo2"
+  },
+  {
+    "file": "templates/empty/empty/photo2_board5.png",
+    "crop_xywh": [
+      700,
+      311,
+      36,
+      48
+    ],
+    "source": "photo2"
+  },
+  {
+    "file": "templates/glyph/1/photo2_stack_0.png",
+    "crop_xywh": [
+      633,
+      492,
+      3,
+      15
+    ],
+    "source": "photo2"
+  },
+  {
+    "file": "templates/glyph/9/photo2_stack_1.png",
+    "crop_xywh": [
+      638,
+      492,
+      4,
+      15
+    ],
+    "source": "photo2"
+  },
+  {
+    "file": "templates/glyph/comma/photo2_stack_2.png",
+    "crop_xywh": [
+      643,
+      492,
+      2,
+      15
+    ],
+    "source": "photo2"
+  },
+  {
+    "file": "templates/glyph/9/photo2_stack_3.png",
+    "crop_xywh": [
+      646,
+      492,
+      5,
+      15
+    ],
+    "source": "photo2"
+  },
+  {
+    "file": "templates/glyph/5/photo2_stack_4.png",
+    "crop_xywh": [
+      651,
+      492,
+      5,
+      15
+    ],
+    "source": "photo2"
+  },
+  {
+    "file": "templates/glyph/0/photo2_stack_5.png",
+    "crop_xywh": [
+      656,
+      492,
+      6,
+      15
+    ],
+    "source": "photo2"
+  },
+  {
+    "file": "templates/card/Qc/photo3_hero1.png",
+    "crop_xywh": [
+      695,
+      464,
+      24,
+      47
+    ],
+    "source": "photo3"
+  },
+  {
+    "file": "templates/card/2d/photo3_hero2.png",
+    "crop_xywh": [
+      719,
+      464,
+      33,
+      47
+    ],
+    "source": "photo3"
+  },
+  {
+    "file": "templates/card/4c/photo3_board1.png",
+    "crop_xywh": [
+      544,
+      311,
+      36,
+      48
+    ],
+    "source": "photo3"
+  },
+  {
+    "file": "templates/card/Qd/photo3_board2.png",
+    "crop_xywh": [
+      583,
+      311,
+      36,
+      48
+    ],
+    "source": "photo3"
+  },
+  {
+    "file": "templates/card/Ts/photo3_board3.png",
+    "crop_xywh": [
+      622,
+      311,
+      36,
+      48
+    ],
+    "source": "photo3"
+  },
+  {
+    "file": "templates/empty/empty/photo3_board4.png",
+    "crop_xywh": [
+      661,
+      311,
+      36,
+      48
+    ],
+    "source": "photo3"
+  },
+  {
+    "file": "templates/empty/empty/photo3_board5.png",
+    "crop_xywh": [
+      700,
+      311,
+      36,
+      48
+    ],
+    "source": "photo3"
+  },
+  {
+    "file": "templates/glyph/1/photo3_stack_0.png",
+    "crop_xywh": [
+      633,
+      492,
+      3,
+      15
+    ],
+    "source": "photo3"
+  },
+  {
+    "file": "templates/glyph/9/photo3_stack_1.png",
+    "crop_xywh": [
+      638,
+      492,
+      4,
+      15
+    ],
+    "source": "photo3"
+  },
+  {
+    "file": "templates/glyph/comma/photo3_stack_2.png",
+    "crop_xywh": [
+      643,
+      492,
+      2,
+      15
+    ],
+    "source": "photo3"
+  },
+  {
+    "file": "templates/glyph/9/photo3_stack_3.png",
+    "crop_xywh": [
+      646,
+      492,
+      5,
+      15
+    ],
+    "source": "photo3"
+  },
+  {
+    "file": "templates/glyph/0/photo3_stack_4.png",
+    "crop_xywh": [
+      651,
+      492,
+      5,
+      15
+    ],
+    "source": "photo3"
+  },
+  {
+    "file": "templates/glyph/0/photo3_stack_5.png",
+    "crop_xywh": [
+      656,
+      492,
+      6,
+      15
+    ],
+    "source": "photo3"
+  },
+  {
+    "file": "templates/glyph/1/photo3_pot_0.png",
+    "crop_xywh": [
+      649,
+      362,
+      3,
+      14
+    ],
+    "source": "photo3"
+  },
+  {
+    "file": "templates/glyph/2/photo3_pot_1.png",
+    "crop_xywh": [
+      654,
+      362,
+      6,
+      14
+    ],
+    "source": "photo3"
+  },
+  {
+    "file": "templates/glyph/dot/photo3_pot_2.png",
+    "crop_xywh": [
+      661,
+      362,
+      2,
+      14
+    ],
+    "source": "photo3"
+  },
+  {
+    "file": "templates/glyph/6/photo3_pot_3.png",
+    "crop_xywh": [
+      664,
+      362,
+      7,
+      14
+    ],
+    "source": "photo3"
+  },
+  {
+    "file": "templates/glyph/K/photo3_pot_4.png",
+    "crop_xywh": [
+      672,
+      362,
+      6,
+      14
+    ],
+    "source": "photo3"
+  },
+  {
+    "file": "templates/card/Ks/photo4_hero1.png",
+    "crop_xywh": [
+      695,
+      464,
+      24,
+      47
+    ],
+    "source": "photo4"
+  },
+  {
+    "file": "templates/card/8d/photo4_hero2.png",
+    "crop_xywh": [
+      719,
+      464,
+      33,
+      47
+    ],
+    "source": "photo4"
+  },
+  {
+    "file": "templates/empty/empty/photo4_board1.png",
+    "crop_xywh": [
+      544,
+      311,
+      36,
+      48
+    ],
+    "source": "photo4"
+  },
+  {
+    "file": "templates/empty/empty/photo4_board2.png",
+    "crop_xywh": [
+      583,
+      311,
+      36,
+      48
+    ],
+    "source": "photo4"
+  },
+  {
+    "file": "templates/empty/empty/photo4_board3.png",
+    "crop_xywh": [
+      622,
+      311,
+      36,
+      48
+    ],
+    "source": "photo4"
+  },
+  {
+    "file": "templates/empty/empty/photo4_board4.png",
+    "crop_xywh": [
+      661,
+      311,
+      36,
+      48
+    ],
+    "source": "photo4"
+  },
+  {
+    "file": "templates/empty/empty/photo4_board5.png",
+    "crop_xywh": [
+      700,
+      311,
+      36,
+      48
+    ],
+    "source": "photo4"
+  },
+  {
+    "file": "templates/glyph/1/photo4_stack_0.png",
+    "crop_xywh": [
+      633,
+      492,
+      3,
+      15
+    ],
+    "source": "photo4"
+  },
+  {
+    "file": "templates/glyph/9/photo4_stack_1.png",
+    "crop_xywh": [
+      638,
+      492,
+      4,
+      15
+    ],
+    "source": "photo4"
+  },
+  {
+    "file": "templates/glyph/comma/photo4_stack_2.png",
+    "crop_xywh": [
+      643,
+      492,
+      2,
+      15
+    ],
+    "source": "photo4"
+  },
+  {
+    "file": "templates/glyph/8/photo4_stack_3.png",
+    "crop_xywh": [
+      646,
+      492,
+      5,
+      15
+    ],
+    "source": "photo4"
+  },
+  {
+    "file": "templates/glyph/5/photo4_stack_4.png",
+    "crop_xywh": [
+      651,
+      492,
+      5,
+      15
+    ],
+    "source": "photo4"
+  },
+  {
+    "file": "templates/glyph/0/photo4_stack_5.png",
+    "crop_xywh": [
+      656,
+      492,
+      6,
+      15
+    ],
+    "source": "photo4"
+  },
+  {
+    "file": "templates/card/Ks/photo5_hero1.png",
+    "crop_xywh": [
+      695,
+      464,
+      24,
+      47
+    ],
+    "source": "photo5"
+  },
+  {
+    "file": "templates/card/8d/photo5_hero2.png",
+    "crop_xywh": [
+      719,
+      464,
+      33,
+      47
+    ],
+    "source": "photo5"
+  },
+  {
+    "file": "templates/card/6c/photo5_board1.png",
+    "crop_xywh": [
+      544,
+      311,
+      36,
+      48
+    ],
+    "source": "photo5"
+  },
+  {
+    "file": "templates/card/Qs/photo5_board2.png",
+    "crop_xywh": [
+      583,
+      311,
+      36,
+      48
+    ],
+    "source": "photo5"
+  },
+  {
+    "file": "templates/card/7s/photo5_board3.png",
+    "crop_xywh": [
+      622,
+      311,
+      36,
+      48
+    ],
+    "source": "photo5"
+  },
+  {
+    "file": "templates/empty/empty/photo5_board4.png",
+    "crop_xywh": [
+      661,
+      311,
+      36,
+      48
+    ],
+    "source": "photo5"
+  },
+  {
+    "file": "templates/empty/empty/photo5_board5.png",
+    "crop_xywh": [
+      700,
+      311,
+      36,
+      48
+    ],
+    "source": "photo5"
+  },
+  {
+    "file": "templates/glyph/1/photo5_stack_0.png",
+    "crop_xywh": [
+      633,
+      492,
+      3,
+      15
+    ],
+    "source": "photo5"
+  },
+  {
+    "file": "templates/glyph/8/photo5_stack_1.png",
+    "crop_xywh": [
+      638,
+      492,
+      4,
+      15
+    ],
+    "source": "photo5"
+  },
+  {
+    "file": "templates/glyph/comma/photo5_stack_2.png",
+    "crop_xywh": [
+      643,
+      492,
+      2,
+      15
+    ],
+    "source": "photo5"
+  },
+  {
+    "file": "templates/glyph/6/photo5_stack_3.png",
+    "crop_xywh": [
+      646,
+      492,
+      5,
+      15
+    ],
+    "source": "photo5"
+  },
+  {
+    "file": "templates/glyph/5/photo5_stack_4.png",
+    "crop_xywh": [
+      651,
+      492,
+      5,
+      15
+    ],
+    "source": "photo5"
+  },
+  {
+    "file": "templates/glyph/0/photo5_stack_5.png",
+    "crop_xywh": [
+      656,
+      492,
+      6,
+      15
+    ],
+    "source": "photo5"
+  },
+  {
+    "file": "templates/card/Ks/photo6_hero1.png",
+    "crop_xywh": [
+      695,
+      464,
+      24,
+      47
+    ],
+    "source": "photo6"
+  },
+  {
+    "file": "templates/card/8d/photo6_hero2.png",
+    "crop_xywh": [
+      719,
+      464,
+      33,
+      47
+    ],
+    "source": "photo6"
+  },
+  {
+    "file": "templates/card/6c/photo6_board1.png",
+    "crop_xywh": [
+      544,
+      311,
+      36,
+      48
+    ],
+    "source": "photo6"
+  },
+  {
+    "file": "templates/card/Qs/photo6_board2.png",
+    "crop_xywh": [
+      583,
+      311,
+      36,
+      48
+    ],
+    "source": "photo6"
+  },
+  {
+    "file": "templates/card/7s/photo6_board3.png",
+    "crop_xywh": [
+      622,
+      311,
+      36,
+      48
+    ],
+    "source": "photo6"
+  },
+  {
+    "file": "templates/card/5h/photo6_board4.png",
+    "crop_xywh": [
+      661,
+      311,
+      36,
+      48
+    ],
+    "source": "photo6"
+  },
+  {
+    "file": "templates/empty/empty/photo6_board5.png",
+    "crop_xywh": [
+      700,
+      311,
+      36,
+      48
+    ],
+    "source": "photo6"
+  },
+  {
+    "file": "templates/glyph/1/photo6_pot_0.png",
+    "crop_xywh": [
+      650,
+      362,
+      3,
+      14
+    ],
+    "source": "photo6"
+  },
+  {
+    "file": "templates/glyph/1/photo6_pot_1.png",
+    "crop_xywh": [
+      655,
+      362,
+      3,
+      14
+    ],
+    "source": "photo6"
+  },
+  {
+    "file": "templates/glyph/dot/photo6_pot_2.png",
+    "crop_xywh": [
+      660,
+      362,
+      2,
+      14
+    ],
+    "source": "photo6"
+  },
+  {
+    "file": "templates/glyph/9/photo6_pot_3.png",
+    "crop_xywh": [
+      663,
+      362,
+      7,
+      14
+    ],
+    "source": "photo6"
+  },
+  {
+    "file": "templates/glyph/K/photo6_pot_4.png",
+    "crop_xywh": [
+      671,
+      362,
+      6,
+      14
+    ],
+    "source": "photo6"
+  },
+  {
+    "file": "templates/glyph/5/photo6_call_0.png",
+    "crop_xywh": [
+      1063,
+      652,
+      5,
+      15
+    ],
+    "source": "photo6"
+  },
+  {
+    "file": "templates/glyph/dot/photo6_call_1.png",
+    "crop_xywh": [
+      1069,
+      652,
+      2,
+      15
+    ],
+    "source": "photo6"
+  },
+  {
+    "file": "templates/glyph/5/photo6_call_2.png",
+    "crop_xywh": [
+      1072,
+      652,
+      5,
+      15
+    ],
+    "source": "photo6"
+  },
+  {
+    "file": "templates/glyph/K/photo6_call_3.png",
+    "crop_xywh": [
+      1078,
+      652,
+      6,
+      15
+    ],
+    "source": "photo6"
+  },
+  {
+    "file": "templates/glyph/1/photo6_stack_0.png",
+    "crop_xywh": [
+      633,
+      492,
+      3,
+      15
+    ],
+    "source": "photo6"
+  },
+  {
+    "file": "templates/glyph/3/photo6_stack_1.png",
+    "crop_xywh": [
+      638,
+      492,
+      4,
+      15
+    ],
+    "source": "photo6"
+  },
+  {
+    "file": "templates/glyph/comma/photo6_stack_2.png",
+    "crop_xywh": [
+      643,
+      492,
+      2,
+      15
+    ],
+    "source": "photo6"
+  },
+  {
+    "file": "templates/glyph/9/photo6_stack_3.png",
+    "crop_xywh": [
+      646,
+      492,
+      5,
+      15
+    ],
+    "source": "photo6"
+  },
+  {
+    "file": "templates/glyph/5/photo6_stack_4.png",
+    "crop_xywh": [
+      651,
+      492,
+      5,
+      15
+    ],
+    "source": "photo6"
+  },
+  {
+    "file": "templates/glyph/0/photo6_stack_5.png",
+    "crop_xywh": [
+      656,
+      492,
+      6,
+      15
+    ],
+    "source": "photo6"
+  }
+]
