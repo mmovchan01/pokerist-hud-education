@@ -99,11 +99,12 @@ class Reading:
 class TableState:
     hero: tuple
     board: tuple
-    pot: float
-    stack: float
-    call: float
+    # Money is optional: None means the number was not read. Cards alone still give equity.
+    pot: float | None
+    stack: float | None
+    call: float | None
     opponents: int
-    effective_stack: float
+    effective_stack: float | None
     readings: dict = field(default_factory=dict)
     captured_at: float = field(default_factory=time.time)
     effective_known: bool = False
@@ -260,11 +261,11 @@ class Recognizer:
                 readings[name] = self.number(roi)
             else:
                 readings[name] = self.symbol(roi, ('back', 'empty') if name.startswith('opp') else ('card', 'empty'))
-        required = ['hero1', 'hero2', *[f'board{i}' for i in range(1, 6)], 'pot', 'stack', 'call']
+        required = ['hero1', 'hero2', *[f'board{i}' for i in range(1, 6)]]
         if any(readings[n].status == 'unknown' for n in required):
             return None, readings, 'Не распознаны обязательные зоны: '+', '.join(n for n in required if readings[n].status == 'unknown')
-        if any(readings[n].status != 'known' for n in ('hero1', 'hero2', 'pot', 'stack', 'call')):
-            return None, readings, 'Ожидается рука героя и числовые значения'
+        if any(readings[n].status != 'known' for n in ('hero1', 'hero2')):
+            return None, readings, 'Ожидается рука героя'
         hero = tuple(readings[n].value for n in ('hero1', 'hero2'))
         board_values = [readings[f'board{i}'].value for i in range(1, 6)]
         board = tuple(c for c in board_values if c)
@@ -279,11 +280,13 @@ class Recognizer:
         opponents = override if override is not None else len(active)
         if not 1 <= opponents <= 8:
             return None, readings, 'Нет активных оппонентов'
-        stack = readings['stack'].value
+        def money(name):
+            return readings[name].value if readings[name].status == 'known' else None
+        stack = money('stack')
         other_stacks = [readings.get('oppstack'+n[3:], Reading()).value for n in active]
-        effective_known = override is None and bool(other_stacks) and all(s is not None for s in other_stacks)
+        effective_known = override is None and stack is not None and bool(other_stacks) and all(s is not None for s in other_stacks)
         effective = min(stack, max(other_stacks)) if effective_known else stack
-        state = TableState(hero, board, readings['pot'].value, stack, readings['call'].value,
+        state = TableState(hero, board, money('pot'), stack, money('call'),
                            opponents, effective, readings, effective_known=effective_known)
         return state, readings, ''
 

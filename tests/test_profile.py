@@ -85,6 +85,12 @@ def test_complete_uploaded_screenshot(recognizer, number):
         assert state.hero == ('Ks', '8d')
         assert state.board == ('6c', 'Qs', '7s', '5h')
         assert (state.pot, state.call, state.stack) == (11900, 5500, 13950)
+    elif number == 1:
+        # Empty table before the deal: no hero cards, so no state.
+        assert state is None and error
     else:
-        assert state is None
-        assert error
+        # Cards alone are enough; unread amounts stay None instead of being guessed.
+        assert state is not None and state.hero and state.board is not None
+        if number in (4, 5):
+            assert state.hero == ('Ks', '8d')
+        assert state.pot is None or state.pot > 0

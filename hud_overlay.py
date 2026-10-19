@@ -456,7 +456,10 @@ class HUD:
                 self.stat_labels[key].config(foreground=P['text'])
             return
         equity = result.equity.equity*100
-        if state.call == 0:
+        if state.call is None or result.pot_odds is None:
+            rows = {'equity': (f'около {equity:.0f}%', STAT_HINTS['equity'], 'text'),
+                    'odds': ('сумма не видна', 'сравните шанс с долей колла вручную', 'text')}
+        elif state.call == 0:
             rows = {'equity': (f'около {equity:.0f}%', STAT_HINTS['equity'], 'text'),
                     'odds': ('колла нет', 'вы ничего не доплачиваете', 'text')}
         else:

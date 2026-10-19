@@ -168,3 +168,15 @@ def test_unknown_white_card_not_empty(tmp_path):
     cv2.putText(card, 'Q', (5, 32), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 2)
     result = Recognizer({}, TemplateBank(tmp_path)).symbol(card, ('card', 'empty'))
     assert result.status == 'unknown'
+
+
+def test_cards_only_table_without_amounts(tmp_path, monkeypatch):
+    """Cards and opponents alone are enough: pot, call and stack may stay unread."""
+    cards = list(map(known, ['Ah', 'Kd', '2c', '3c', '4s']))+[empty(), empty()]
+    r = mocked_recognizer(tmp_path, monkeypatch, cards, opps=1)
+    monkeypatch.setattr(r, 'number', lambda *args: Reading())
+    state, _, error = r.read(np.zeros((100, 100, 3), np.uint8))
+    assert not error
+    assert state.hero == ('Ah', 'Kd')
+    assert state.pot is None and state.call is None and state.stack is None
+    assert state.effective_stack is None

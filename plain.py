@@ -31,7 +31,7 @@ GLOSSARY = (
     ('SPR (запас стека)', 'Сколько банков помещается в ваш стек. Нужен для продвинутой игры; новичку можно не думать о нём.'),
 )
 
-VERDICT_TONES = {'Колл': 'good', 'Пас': 'bad', 'Чек': 'info', 'Спорно': 'warn'}
+VERDICT_TONES = {'Колл': 'good', 'Пас': 'bad', 'Чек': 'info', 'Спорно': 'warn', 'Без суммы': 'info'}
 
 
 @dataclass(frozen=True)
@@ -59,8 +59,10 @@ def money(value):
 
 
 def pot_line(state):
-    return (f'Банк {money(state.pot)} · доплатить {money(state.call)} · '
-            f'ваш стек {money(state.stack)} · соперников {state.opponents}')
+    def amount(value):
+        return '—' if value is None else money(value)
+    return (f'Банк {amount(state.pot)} · доплатить {amount(state.call)} · '
+            f'ваш стек {amount(state.stack)} · соперников {state.opponents}')
 
 
 def make_verdict(state, result):
@@ -72,13 +74,19 @@ def make_verdict(state, result):
     caveat = (f'Расчёт приблизительный: погрешность около ±{error:.0f}%. '
               f'Он сделан по {runs} случайным раздачам.')
     facts = [('Ваш шанс выиграть', f'около {equity:.0f}%')]
-    if state.call > 0:
+    if state.call and need is not None:
         facts.append(('Нужно для колла', f'от {need:.0f}%'))
     if state.board:
         facts.append(('Ваша рука', result.made))
     else:
         facts.append(('Стартовая рука', result.preflop.split(';', 1)[0]))
 
+    if state.pot is None or state.call is None:
+        # Without the amounts there is no honest decision; show the odds to compare by hand.
+        return Verdict('Без суммы', 'Сумма ставки не распознана',
+                       f'Ваш шанс около {equity:.0f}%. Чтобы решить, сравните его с долей колла: '
+                       'колл ÷ (банк + колл). Если шанс выше этой доли, колл обычно выгоден.',
+                       tuple(facts), caveat, VERDICT_TONES['Без суммы'])
     if state.call == 0:
         return Verdict('Чек', 'Можно проверить бесплатно',
                        'Никто не ставит, поэтому чек ничего не стоит. Если шанс высокий, '

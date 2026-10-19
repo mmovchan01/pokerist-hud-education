@@ -108,3 +108,14 @@ def test_invalid_cards(hero, board):
 def test_invalid_money(pot, call):
     with pytest.raises(ValueError):
         Coach().analyze(state(pot=pot, call=call))
+
+
+@pytest.mark.parametrize('pot,call,stack', [(None, None, None), (30000, None, 100000),
+                                            (None, 10000, 100000), (30000, 10000, None)])
+def test_analysis_survives_unread_amounts(pot, call, stack):
+    result = Coach(seed=42).analyze(TableState(('Ah', 'Kh'), ('Qh', 'Jh', '2c'), pot, stack, call, 2, None))
+    assert result.equity.equity > 0
+    assert result.explanation
+    if pot is None or call is None:
+        assert result.pot_odds is None and result.ev is None and result.spr is None
+        assert 'Суммы не распознаны' in result.recommendation

@@ -191,8 +191,8 @@ class Coaching:
     draws: DrawReport
     made: str
     preflop: str
-    pot_odds: float
-    ev: float
+    pot_odds: float | None
+    ev: float | None
     ev_pot_percent: float | None
     spr: float | None
     recommendation: str
@@ -205,18 +205,33 @@ class Coach:
 
     def analyze(self, state):
         validate_cards(state.hero, state.board)
-        if any(not math.isfinite(x) or x < 0 for x in (state.pot, state.call, state.stack, state.effective_stack)):
+        money = [x for x in (state.pot, state.call, state.stack, state.effective_stack) if x is not None]
+        if any(not math.isfinite(x) or x < 0 for x in money):
             raise ValueError('Банк, колл и стеки должны быть неотрицательными конечными числами')
-        if state.call > state.stack:
+        if state.call is not None and state.stack is not None and state.call > state.stack:
             raise ValueError('Колл больше стека: нужен доступный размер all-in и банк без недоступных side pots')
         eq = monte_carlo(state.hero, state.board, state.opponents, self.iterations, self.seed)
         draw = draws(state.hero, state.board)
         made = made_hand(state.hero, state.board)
         pre = preflop(state.hero, state.opponents)
+        if state.pot is None or state.call is None:
+            # Cards only: equity, hand and draws still work; pot odds, EV and SPR need the amounts.
+            text = (f'У вас {made}. Эквити против {state.opponents} случайных рук: '
+                    f'{eq.equity*100:.1f}% (MC ±{eq.error95*100:.1f} п.п., 95%). '
+                    'Банк или колл не распознаны, поэтому порог колла и EV не посчитаны. '
+                    'Сравните шанс с долей колла: колл ÷ (банк + колл). ')
+            if state.board and len(state.board) < 5:
+                text += (f'{draw.description}. Уникальных условных аутов: {len(draw.outs)}. '
+                         f'Правило 2/4: {draw.rule_percent:.1f}%; точно попасть в этот набор '
+                         f'к риверу: {draw.hit_percent:.1f}%. Это не вероятность победы! ')
+            text += ('Модель: без рейка, будущих ставок и side pots, все увидят вскрытие; '
+                     'диапазоны оппонентов равномерные. Для рейза нужны fold equity и диапазон продолжения.')
+            return Coaching(eq, draw, made, pre, None, None, None, None,
+                            'Суммы не распознаны: решение по шансу', text)
         total = state.pot+state.call
         odds = state.call/total if total else 0.
         ev = eq.equity*total-state.call
-        spr = state.effective_stack/state.pot if state.pot else None
+        spr = state.effective_stack/state.pot if state.pot and state.effective_stack is not None else None
         ev_pct = ev/state.pot*100 if state.pot else None
         if state.call == 0:
             recommendation = 'Бесплатный чек доступен; EV ставки не оценён'

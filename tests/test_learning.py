@@ -142,3 +142,14 @@ def test_report_on_empty_folder_explains_what_to_do(tmp_path):
     assert 'узнаёт 0 из 52' in text
     assert 'Проверка точности пока невозможна' in text
     assert 'Редактор снимков' in text
+
+
+def test_verdict_without_amounts_asks_for_comparison():
+    verdict = make_verdict(fake_state(pot=None), fake_result(equity=40, error=2, pot_odds=None))
+    assert verdict.action == 'Без суммы' and verdict.tone == 'info'
+    assert 'колл ÷ (банк + колл)' in verdict.summary
+
+
+def test_pot_line_shows_dash_for_unread_amounts():
+    line = pot_line(SimpleNamespace(pot=None, call=None, stack=None, opponents=2))
+    assert 'Банк —' in line and 'доплатить —' in line and 'соперников 2' in line
