@@ -1,5 +1,5 @@
 from card_choices import (CARD_CHOICES, EMPTY_CHOICE, choice_color,
-                          display_choice, resolve_choice)
+                          display_choice, filtered_choices, resolve_choice)
 from screenshot_album import Album
 import numpy as np
 
@@ -31,3 +31,12 @@ def test_empty_choice_exports_as_empty_not_card(tmp_path):
     assert record['items']['hero1']['kind'] == 'empty'
     assert record['items']['hero1']['export'].startswith('empty/empty/')
     assert not (album.templates/'card').exists()
+
+
+def test_known_card_stays_selectable_by_default():
+    """Regression: 3♥ with one saved sample disappeared from the picker, so it could not be added again."""
+    from card_choices import MISSING_ONLY_DEFAULT
+    assert MISSING_ONLY_DEFAULT is False
+    known = {'3h'}
+    assert display_choice('3h') in filtered_choices(known, MISSING_ONLY_DEFAULT)
+    assert display_choice('3h') not in filtered_choices(known, True)

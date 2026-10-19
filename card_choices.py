@@ -3,6 +3,9 @@ from screenshot_album import CARD_LABELS
 
 SYMBOLS = {'s': '♠', 'h': '♥', 'd': '♦', 'c': '♣'}
 EMPTY_CHOICE = 'Пусто'
+# Known cards stay in the picker by default: hiding them made it impossible to add
+# another photo of, for example, 3♥ once one sample existed.
+MISSING_ONLY_DEFAULT = False
 CARD_CHOICES = {EMPTY_CHOICE: 'empty', **{
     f'{card[0]}{SYMBOLS[card[1]]}  ({card})': card for card in CARD_LABELS}}
 

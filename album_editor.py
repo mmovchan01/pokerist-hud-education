@@ -12,7 +12,7 @@ from screenshot_album import Album, read_image
 from setup_support import selection_bounds, preview_scale
 from profile_support import load_profile
 
-from card_choices import choice_color, display_choice, resolve_choice, filtered_choices
+from card_choices import MISSING_ONLY_DEFAULT, choice_color, display_choice, resolve_choice, filtered_choices
 from color_choice import ColorChoice
 from editor_assistant import EditorAssistant, identical_sample_exists
 from ui_theme import PALETTE as P, apply_theme, font
@@ -44,7 +44,7 @@ class AlbumEditor:
         self.cards_only = tk.BooleanVar(value=True)
         self.pin = tk.BooleanVar(value=False)
         self.auto_known = tk.BooleanVar(value=True)
-        self.missing_only = tk.BooleanVar(value=True)
+        self.missing_only = tk.BooleanVar(value=MISSING_ONLY_DEFAULT)
         self.add_variants = tk.BooleanVar(value=False)
         self.coverage = tk.StringVar(value='База карт: проверка…')
         bar = ttk.Frame(self.root)
@@ -58,7 +58,7 @@ class AlbumEditor:
         assist = ttk.Frame(self.root)
         assist.pack(fill='x', padx=8, pady=3)
         ttk.Checkbutton(assist, text='Распознавать и пропускать известные', variable=self.auto_known, command=self.toggle_assistant).pack(side='left')
-        ttk.Checkbutton(assist, text='Только недостающие карты', variable=self.missing_only, command=self.refresh_choices).pack(side='left')
+        ttk.Checkbutton(assist, text='Скрыть уже известные карты', variable=self.missing_only, command=self.refresh_choices).pack(side='left')
         ttk.Button(assist, text='Проверить последнюю авто', command=self.review_last).pack(side='left', padx=5)
         ttk.Label(assist, textvariable=self.coverage).pack(side='right')
         panes = ttk.Panedwindow(self.root, orient='horizontal')
@@ -176,7 +176,7 @@ class AlbumEditor:
                 self.status.set(f'Предположение: {display_choice(suggestion.label)}, похожесть {suggestion.confidence:.0%}. Проверьте и нажмите Enter (образец сохранится в базу), либо исправьте.')
             else:
                 self.refresh_choices()
-                self.status.set(('Карта не распознана — выберите вручную. ' if self.auto_known.get() else 'Автопропуск выключен — выберите вручную. ')+'Чтобы выбрать знакомую карту, отключите «Только недостающие карты».')
+                self.status.set(('Карта не распознана — выберите вручную. ' if self.auto_known.get() else 'Автопропуск выключен — выберите вручную. ')+'Чтобы выбрать знакомую карту, снимите «Скрыть уже известные карты».')
         self.root.after(100, self.poll_analysis)
 
     def review_last(self):
